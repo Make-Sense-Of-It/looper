@@ -5,14 +5,17 @@ import { Theme } from "@radix-ui/themes";
 import "../styles/globals.css";
 import "@radix-ui/themes/styles.css";
 import { FileAnalysisProvider } from "../providers/FileAnalysisProvider";
+import { FileProcessingProvider } from "../providers/FileProcessingProvider";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <LocalStorageProvider>
       <FileAnalysisProvider>
-        <Theme>
-          <Component {...pageProps} />
-        </Theme>
+        <FileProcessingProvider>
+          <Theme accentColor="gold">
+            <Component {...pageProps} />
+          </Theme>
+        </FileProcessingProvider>
       </FileAnalysisProvider>
     </LocalStorageProvider>
   );

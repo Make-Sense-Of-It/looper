@@ -5,37 +5,42 @@ import { companies } from "../../utils/models";
 import { Flex } from "@radix-ui/themes";
 
 const TokenEstimate: React.FC = () => {
-  const { fileInfo } = useFileAnalysis();
-  const { selectedCompany, selectedModel } = useLocalStorage();
+    const { files } = useFileAnalysis();
+    const { selectedCompany, selectedModel } = useLocalStorage();
 
-  if (!fileInfo) {
-    return null;
-  }
+    if (files.length === 0) {
+        return null;
+    }
 
-  const formatCost = (cost: number): string => {
-    if (cost < 0.00001) return "Effectively zero";
-    if (cost < 0.01) return cost.toFixed(5);
-    return cost.toFixed(2);
-  };
+    const formatCost = (cost: number): string => {
+        if (cost < 0.00001) return "Effectively zero";
+        if (cost < 0.01) return cost.toFixed(5);
+        return cost.toFixed(2);
+    };
 
-  const calculateCost = (): string => {
-    if (!selectedCompany || !selectedModel) return "N/A";
-    const company = companies.find((c) => c.name === selectedCompany);
-    const model = company?.models.find((m) => m.name === selectedModel);
-    if (!model) return "N/A";
-    const costPerToken = model.costPerMillionTokens / 1000000;
-    const totalCost = costPerToken * (fileInfo?.tokenEstimate ?? 0);
-    return formatCost(totalCost);
-  };
+    const calculateCost = (): string => {
+        if (!selectedCompany || !selectedModel) return "N/A";
+        const company = companies.find((c) => c.name === selectedCompany);
+        const model = company?.models.find((m) => m.name === selectedModel);
+        if (!model) return "N/A";
+        const costPerToken = model.costPerMillionTokens / 1000000;
+        const totalTokens = files.reduce((sum, file) => sum + (file.tokenEstimate ?? 0), 0);
+        const totalCost = costPerToken * totalTokens;
+        return formatCost(totalCost);
+    };
 
-  return (
-    <Flex gap="3">
-      <p>Size: {(fileInfo.size / 1024).toFixed(2)} KB</p>
-      <p>Characters: {fileInfo.characterCount}</p>
-      <p>Tokens: {fileInfo.tokenEstimate}</p>
-      <p>Estimated input cost: ${calculateCost()}</p>
-    </Flex>
-  );
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    const totalCharacters = files.reduce((sum, file) => sum + file.characterCount, 0);
+    const totalTokens = files.reduce((sum, file) => sum + (file.tokenEstimate ?? 0), 0);
+
+    return (
+        <Flex gap="3" className="text-sm">
+            <p><strong>Size</strong>: {(totalSize / 1024).toFixed(2)} KB</p>
+            <p><strong>Characters</strong>: {totalCharacters}</p>
+            <p><strong>Est'd tokens</strong>: {totalTokens}</p>
+            <p><strong>Est'd input cost</strong>: ${calculateCost()}</p>
+        </Flex>
+    );
 };
 
 export default TokenEstimate;

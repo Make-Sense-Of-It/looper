@@ -3,22 +3,14 @@ import formidable from "formidable";
 import fs from "fs/promises";
 import path from "path";
 import { companies, Company, Model } from "../../utils/models";
+import { Readable } from 'stream';
+import JSZip from 'jszip';
 
 export const config = {
   api: {
     bodyParser: false,
   },
 };
-
-interface ProcessedResult {
-  result: string;
-}
-
-interface ErrorResponse {
-  error: string;
-}
-
-type ApiResponse = ProcessedResult | ErrorResponse;
 
 async function parseForm(
   req: NextApiRequest
@@ -29,7 +21,7 @@ async function parseForm(
   const form = formidable({
     uploadDir,
     keepExtensions: true,
-    maxFileSize: 10 * 1024 * 1024, // 10MB limit
+    maxFileSize: 50 * 1024 * 1024, // 50MB limit
   });
 
   return new Promise((resolve, reject) => {
@@ -60,8 +52,29 @@ async function validateFields(
   return { apiKey, selectedCompany, selectedModel, prompt };
 }
 
-async function processFile(file: formidable.File): Promise<string> {
-  return await fs.readFile(file.filepath, "utf-8");
+async function processFile(file: formidable.File, apiKey: string, model: Model, prompt: string): Promise<string> {
+  const fileContent = await fs.readFile(file.filepath, "utf-8");
+
+  // Call the mock API
+  const mockApiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      apiKey,
+      model: model.name,
+      prompt,
+      fileContent,
+    }),
+  });
+
+  if (!mockApiResponse.ok) {
+    throw new Error('Failed to process the file');
+  }
+
+  const llmResponse = await mockApiResponse.json();
+  return llmResponse.result;
 }
 
 async function getCompanyAndModel(
@@ -78,27 +91,20 @@ async function getCompanyAndModel(
   return { company, model };
 }
 
-async function mockLLMAPICall(
-  apiKey: string,
-  model: string,
-  prompt: string,
-  fileContent: string
-): Promise<string> {
-  // In a real implementation, you would make an API call to the selected LLM service here
-  return `Processed with ${model}:\nPrompt: ${prompt}\nFile content: ${fileContent.substring(
-    0,
-    100
-  )}...`;
-}
-
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse>
+  res: NextApiResponse
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", ["POST"]);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
 
   try {
     const [fields, files] = await parseForm(req);
@@ -107,28 +113,36 @@ export default async function handler(
 
     const uploadedFile = files.file?.[0];
     if (!uploadedFile) {
-      return res.status(400).json({ error: "No file uploaded" });
+      res.write(`data: ${JSON.stringify({ error: "No file uploaded" })}\n\n`);
+      return res.end();
     }
 
-    const fileContent = await processFile(uploadedFile);
-    const { model } = await getCompanyAndModel(
-      selectedCompany,
-      selectedModel
-    );
+    const { model } = await getCompanyAndModel(selectedCompany, selectedModel);
 
-    const llmResponse = await mockLLMAPICall(
-      apiKey,
-      model.name,
-      prompt,
-      fileContent
-    );
+    if (uploadedFile.mimetype === 'application/zip') {
+      const zipBuffer = await fs.readFile(uploadedFile.filepath);
+      const zip = await JSZip.loadAsync(zipBuffer);
+
+      for (const [filename, file] of Object.entries(zip.files)) {
+        if (!file.dir) {
+          const content = await file.async('string');
+          const result = await processFile({ filepath: filename, originalFilename: filename } as formidable.File, apiKey, model, prompt);
+          res.write(`data: ${JSON.stringify({ filename, result })}\n\n`);
+        }
+      }
+    } else {
+      const result = await processFile(uploadedFile, apiKey, model, prompt);
+      res.write(`data: ${JSON.stringify({ filename: uploadedFile.originalFilename, result })}\n\n`);
+    }
 
     // Clean up: remove the temporary file
     await fs.unlink(uploadedFile.filepath);
 
-    res.status(200).json({ result: llmResponse });
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
   } catch (error) {
     console.error("Error processing request:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.write(`data: ${JSON.stringify({ error: "Internal server error" })}\n\n`);
+    res.end();
   }
 }

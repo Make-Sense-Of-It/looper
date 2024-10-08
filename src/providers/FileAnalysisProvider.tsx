@@ -11,8 +11,8 @@ interface FileInfo {
 }
 
 interface FileAnalysisContextType {
-  fileInfo: FileInfo | null;
-  setFileInfo: React.Dispatch<React.SetStateAction<FileInfo | null>>;
+  files: FileInfo[];
+  setFiles: React.Dispatch<React.SetStateAction<FileInfo[]>>;
   processFile: (file: File) => Promise<void>;
 }
 
@@ -31,54 +31,56 @@ export const useFileAnalysis = () => {
 };
 
 export function estimateTokens(text: string): number {
-  // This is a very rough estimation and won't be as accurate as tiktoken
-  // It assumes an average of 4 characters per token
   return Math.ceil(text.length / 4);
 }
 
 export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+  const [files, setFiles] = useState<FileInfo[]>([]);
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
       const content = e.target?.result as ArrayBuffer;
-      let extractedText = "";
+      let newFiles: FileInfo[] = [];
 
       if (file.name.endsWith(".zip")) {
         const zip = new JSZip();
         const zipContents = await zip.loadAsync(content);
-        for (const [, zipEntry] of Object.entries(zipContents.files)) {
+        for (const [filename, zipEntry] of Object.entries(zipContents.files)) {
           if (!zipEntry.dir) {
             const fileContent = await zipEntry.async("string");
-            extractedText += fileContent + "\n";
+            newFiles.push({
+              name: filename,
+              uploadDate: new Date().toLocaleString(),
+              size: fileContent.length,
+              characterCount: fileContent.length,
+              tokenEstimate: estimateTokens(fileContent),
+              content: fileContent,
+            });
           }
         }
       } else {
-        extractedText = new TextDecoder().decode(content);
+        const fileContent = new TextDecoder().decode(content);
+        newFiles.push({
+          name: file.name,
+          uploadDate: new Date().toLocaleString(),
+          size: file.size,
+          characterCount: fileContent.length,
+          tokenEstimate: estimateTokens(fileContent),
+          content: fileContent,
+        });
       }
 
-      const newFileInfo: FileInfo = {
-        name: file.name,
-        uploadDate: new Date().toLocaleString(),
-        size: file.size,
-        characterCount: extractedText.length,
-        tokenEstimate: estimateTokens(extractedText),
-        content: extractedText,
-      };
-
-      setFileInfo(newFileInfo);
+      setFiles(newFiles);
     };
 
     reader.readAsArrayBuffer(file);
   };
 
   return (
-    <FileAnalysisContext.Provider
-      value={{ fileInfo, setFileInfo, processFile }}
-    >
+    <FileAnalysisContext.Provider value={{ files, setFiles, processFile }}>
       {children}
     </FileAnalysisContext.Provider>
   );

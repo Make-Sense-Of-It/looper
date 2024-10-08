@@ -43,7 +43,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     const reader = new FileReader();
     reader.onload = async (e) => {
       const content = e.target?.result as ArrayBuffer;
-      let newFiles: FileInfo[] = [];
+      const newFiles: FileInfo[] = [];
 
       if (file.name.endsWith(".zip")) {
         const zip = new JSZip();

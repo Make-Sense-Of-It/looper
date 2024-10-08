@@ -37,8 +37,8 @@ const TokenEstimate: React.FC = () => {
         <Flex gap="3" className="text-sm">
             <p><strong>Size</strong>: {(totalSize / 1024).toFixed(2)} KB</p>
             <p><strong>Characters</strong>: {totalCharacters}</p>
-            <p><strong>Est'd tokens</strong>: {totalTokens}</p>
-            <p><strong>Est'd input cost</strong>: ${calculateCost()}</p>
+            <p><strong>Est&#39;d tokens</strong>: {totalTokens}</p>
+            <p><strong>Est&#39;d input cost</strong>: ${calculateCost()}</p>
         </Flex>
     );
 };

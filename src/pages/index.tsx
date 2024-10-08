@@ -4,7 +4,7 @@ import Layout from "../components/Layout";
 import ApiKeyInput from "../components/ui/ApiKeyInput";
 import PromptTextArea from "../components/ui/PromptTextArea";
 import FileUpload from "../components/ui/FileUpload";
-import { Flex, Grid } from "@radix-ui/themes";
+import { Flex } from "@radix-ui/themes";
 import CompanyModelComponent from "../components/ui/CompanyModelComponent";
 import TokenEstimate from "../components/ui/TokenEstimate";
 import ProcessButton from "../components/ui/ProcessButton";

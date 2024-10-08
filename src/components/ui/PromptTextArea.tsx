@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Flex, TextArea, Dialog, IconButton, Text, Button } from '@radix-ui/themes';
+import { Flex, TextArea, Dialog, IconButton, Button } from '@radix-ui/themes';
 import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { useLocalStorage } from '../../providers/LocalStorageContext';
 import SectionTitle from './SectionTitle';

@@ -3,8 +3,9 @@ import formidable from "formidable";
 import fs from "fs/promises";
 import path from "path";
 import { companies, Company, Model } from "../../utils/models";
-import { Readable } from 'stream';
-import JSZip from 'jszip';
+// import { Readable } from 'stream';
+import JSZip from "jszip";
+import { llmApiCall } from "./llmApiCall";
 
 export const config = {
   api: {
@@ -32,9 +33,7 @@ async function parseForm(
   });
 }
 
-async function validateFields(
-  fields: formidable.Fields<string>
-): Promise<{
+async function validateFields(fields: formidable.Fields<string>): Promise<{
   apiKey: string;
   selectedCompany: string;
   selectedModel: string;
@@ -52,29 +51,48 @@ async function validateFields(
   return { apiKey, selectedCompany, selectedModel, prompt };
 }
 
-async function processFile(file: formidable.File, apiKey: string, model: Model, prompt: string): Promise<string> {
+async function processFile(
+  file: formidable.File,
+  apiKey: string,
+  model: Model,
+  prompt: string,
+  company: Company
+): Promise<string> {
   const fileContent = await fs.readFile(file.filepath, "utf-8");
 
-  // Call the mock API
-  const mockApiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
+  if (process.env.USE_MOCK_API === "TRUE") {
+    // Call the mock API
+    const mockApiResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          apiKey,
+          model: model.name,
+          prompt,
+          fileContent,
+        }),
+      }
+    );
+
+    if (!mockApiResponse.ok) {
+      throw new Error("Failed to process the file");
+    }
+
+    const llmResponse = await mockApiResponse.json();
+    return llmResponse.result;
+  } else {
+    return await llmApiCall({
       apiKey,
       model: model.name,
       prompt,
       fileContent,
-    }),
-  });
-
-  if (!mockApiResponse.ok) {
-    throw new Error('Failed to process the file');
+      company,
+    });
   }
-
-  const llmResponse = await mockApiResponse.json();
-  return llmResponse.result;
 }
 
 async function getCompanyAndModel(
@@ -101,9 +119,9 @@ export default async function handler(
   }
 
   res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
   });
 
   try {
@@ -117,22 +135,36 @@ export default async function handler(
       return res.end();
     }
 
-    const { model } = await getCompanyAndModel(selectedCompany, selectedModel);
+    const { model, company } = await getCompanyAndModel(selectedCompany, selectedModel);
 
-    if (uploadedFile.mimetype === 'application/zip') {
+    if (uploadedFile.mimetype === "application/zip") {
       const zipBuffer = await fs.readFile(uploadedFile.filepath);
       const zip = await JSZip.loadAsync(zipBuffer);
 
       for (const [filename, file] of Object.entries(zip.files)) {
         if (!file.dir) {
-          const content = await file.async('string');
-          const result = await processFile({ filepath: filename, originalFilename: filename } as formidable.File, apiKey, model, prompt);
+          // const content = await file.async('string');
+          const result = await processFile(
+            {
+              filepath: filename,
+              originalFilename: filename,
+            } as formidable.File,
+            apiKey,
+            model,
+            prompt,
+            company
+          );
           res.write(`data: ${JSON.stringify({ filename, result })}\n\n`);
         }
       }
     } else {
-      const result = await processFile(uploadedFile, apiKey, model, prompt);
-      res.write(`data: ${JSON.stringify({ filename: uploadedFile.originalFilename, result })}\n\n`);
+      const result = await processFile(uploadedFile, apiKey, model, prompt, company);
+      res.write(
+        `data: ${JSON.stringify({
+          filename: uploadedFile.originalFilename,
+          result,
+        })}\n\n`
+      );
     }
 
     // Clean up: remove the temporary file
@@ -142,7 +174,9 @@ export default async function handler(
     res.end();
   } catch (error) {
     console.error("Error processing request:", error);
-    res.write(`data: ${JSON.stringify({ error: "Internal server error" })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ error: "Internal server error" })}\n\n`
+    );
     res.end();
   }
 }

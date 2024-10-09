@@ -2,7 +2,7 @@
 import React from 'react';
 import { useFileProcessing } from '../../providers/FileProcessingProvider';
 import ResultItem from './ResultItem';
-import { Heading, ScrollArea, Flex, Text } from '@radix-ui/themes';
+import { ScrollArea, Flex, Text } from '@radix-ui/themes';
 
 const Results: React.FC = () => {
     const { results } = useFileProcessing();

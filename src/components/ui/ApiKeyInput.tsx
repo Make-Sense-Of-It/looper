@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Button, Flex, Dialog, IconButton, Text, Link } from '@radix-ui/themes';
+import { TextField, Button, Flex, Dialog, IconButton, Link } from '@radix-ui/themes';
 import { TrashIcon, Pencil1Icon, QuestionMarkCircledIcon, EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { useLocalStorage } from '../../providers/LocalStorageContext';
 import SectionTitle from './SectionTitle';
@@ -58,9 +58,9 @@ const ApiKeyInput: React.FC = () => {
                         <Dialog.Description size="2">
                             You need an API key from either Claude or OpenAI in order to use this service. You can generate one by visiting{' '}
                             <Link href="https://openai.com/platform" target="_blank" rel="noopener noreferrer">
-                                OpenAI's platform
+                                OpenAI&apos;s platform
                             </Link>{' '}
-                            or Anthropic's{' '}
+                            or Anthropic&apos;s{' '}
                             <Link href="https://www.anthropic.com/api" target="_blank" rel="noopener noreferrer">
                                 API
                             </Link>

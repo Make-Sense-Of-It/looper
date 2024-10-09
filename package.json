@@ -13,13 +13,17 @@
     "@radix-ui/themes": "^3.1.4",
     "file-saver": "^2.0.5",
     "formidable": "^3.5.1",
+    "gray-matter": "^4.0.3",
     "jszip": "^3.10.1",
     "next": "14.2.14",
     "react": "^18",
     "react-dom": "^18",
-    "react-dropzone": "^14.2.9"
+    "react-dropzone": "^14.2.9",
+    "remark": "^15.0.1",
+    "remark-html": "^16.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.15",
     "@types/file-saver": "^2.0.7",
     "@types/formidable": "^3.4.5",
     "@types/node": "^20",

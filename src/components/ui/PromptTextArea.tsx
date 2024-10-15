@@ -1,24 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Flex, TextArea, Dialog, IconButton, Button } from '@radix-ui/themes';
 import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { useLocalStorage } from '../../providers/LocalStorageContext';
 import SectionTitle from './SectionTitle';
 
 const PromptTextArea: React.FC = () => {
-    const { getItem, setItem } = useLocalStorage();
-    const [prompt, setPrompt] = useState('');
-
-    useEffect(() => {
-        const savedPrompt = getItem('prompt');
-        if (savedPrompt) {
-            setPrompt(savedPrompt);
-        }
-    }, [getItem]);
+    const { prompt, setPrompt } = useLocalStorage();
 
     const handlePromptChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newPrompt = event.target.value;
-        setPrompt(newPrompt);
-        setItem('prompt', newPrompt);
+        setPrompt(event.target.value);
     };
 
     return (

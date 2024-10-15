@@ -1,12 +1,4 @@
-export interface Model {
-  name: string;
-  costPerMillionTokens: number;
-}
-
-export interface Company {
-  name: string;
-  models: Model[];
-}
+import { Company } from "../types";
 
 export const companies: Company[] = [
   {

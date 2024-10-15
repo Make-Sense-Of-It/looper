@@ -1,11 +1,11 @@
+// @/src/pages/api/process-llm.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs/promises";
 import path from "path";
-import { companies, Company, Model } from "../../utils/models";
-// import { Readable } from 'stream';
-import JSZip from "jszip";
-import { llmApiCall } from "./llmApiCall";
+import { getCompanyAndModel, getMimeType, validateFields } from "@/src/utils";
+import { FileData } from "@/src/types";
+import { processFile } from "@/src/utils/processFile";
 
 export const config = {
   api: {
@@ -33,82 +33,6 @@ async function parseForm(
   });
 }
 
-async function validateFields(fields: formidable.Fields<string>): Promise<{
-  apiKey: string;
-  selectedCompany: string;
-  selectedModel: string;
-  prompt: string;
-}> {
-  const apiKey = fields.apiKey?.[0];
-  const selectedCompany = fields.selectedCompany?.[0];
-  const selectedModel = fields.selectedModel?.[0];
-  const prompt = fields.prompt?.[0];
-
-  if (!apiKey || !selectedCompany || !selectedModel || !prompt) {
-    throw new Error("Missing required fields");
-  }
-
-  return { apiKey, selectedCompany, selectedModel, prompt };
-}
-
-async function processFile(
-  file: formidable.File,
-  apiKey: string,
-  model: Model,
-  prompt: string,
-  company: Company
-): Promise<string> {
-  const fileContent = await fs.readFile(file.filepath, "utf-8");
-
-  if (process.env.USE_MOCK_API === "TRUE") {
-    // Call the mock API
-    const mockApiResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          apiKey,
-          model: model.name,
-          prompt,
-          fileContent,
-        }),
-      }
-    );
-
-    if (!mockApiResponse.ok) {
-      throw new Error("Failed to process the file");
-    }
-
-    const llmResponse = await mockApiResponse.json();
-    return llmResponse.result;
-  } else {
-    return await llmApiCall({
-      apiKey,
-      model: model.name,
-      prompt,
-      fileContent,
-      company,
-    });
-  }
-}
-
-async function getCompanyAndModel(
-  selectedCompany: string,
-  selectedModel: string
-): Promise<{ company: Company; model: Model }> {
-  const company = companies.find((c) => c.name === selectedCompany);
-  const model = company?.models.find((m) => m.name === selectedModel);
-
-  if (!company || !model) {
-    throw new Error("Invalid company or model");
-  }
-
-  return { company, model };
-}
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -129,6 +53,7 @@ export default async function handler(
     const { apiKey, selectedCompany, selectedModel, prompt } =
       await validateFields(fields);
 
+    console.log("files", files);
     const uploadedFile = files.file?.[0];
     if (!uploadedFile) {
       res.write(`data: ${JSON.stringify({ error: "No file uploaded" })}\n\n`);
@@ -137,35 +62,38 @@ export default async function handler(
 
     const { model, company } = await getCompanyAndModel(selectedCompany, selectedModel);
 
-    if (uploadedFile.mimetype === "application/zip") {
-      const zipBuffer = await fs.readFile(uploadedFile.filepath);
-      const zip = await JSZip.loadAsync(zipBuffer);
+    const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(uploadedFile.originalFilename || '');
+    const fileExtension = path.extname(uploadedFile.originalFilename || '').toLowerCase();
+    const mimeType = getMimeType(fileExtension);
 
-      for (const [filename, file] of Object.entries(zip.files)) {
-        if (!file.dir) {
-          // const content = await file.async('string');
-          const result = await processFile(
-            {
-              filepath: filename,
-              originalFilename: filename,
-            } as formidable.File,
-            apiKey,
-            model,
-            prompt,
-            company
-          );
-          res.write(`data: ${JSON.stringify({ filename, result })}\n\n`);
-        }
-      }
+    let fileContent: string | Buffer;
+    if (isImage) {
+      // For images, read as base64
+      fileContent = await fs.readFile(uploadedFile.filepath, 'base64');
     } else {
-      const result = await processFile(uploadedFile, apiKey, model, prompt, company);
-      res.write(
-        `data: ${JSON.stringify({
-          filename: uploadedFile.originalFilename,
-          result,
-        })}\n\n`
-      );
+      // For text files, read as utf-8
+      fileContent = await fs.readFile(uploadedFile.filepath, 'utf-8');
     }
+
+
+    const fileData: FileData = {
+      name: uploadedFile.originalFilename || 'unnamed',
+      type: isImage ? 'image' : 'text',
+      content: isImage
+        ? {
+          type: mimeType,
+          data: fileContent
+        }
+        : fileContent
+    };
+
+    const result = await processFile(fileData, apiKey, model, prompt, company);
+    res.write(
+      `data: ${JSON.stringify({
+        filename: uploadedFile.originalFilename,
+        result,
+      })}\n\n`
+    );
 
     // Clean up: remove the temporary file
     await fs.unlink(uploadedFile.filepath);

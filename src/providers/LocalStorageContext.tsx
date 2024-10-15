@@ -14,6 +14,8 @@ interface LocalStorageContextType {
   setSelectedCompany: (company: string | null) => void;
   selectedModel: string | null;
   setSelectedModel: (model: string | null) => void;
+  prompt: string;
+  setPrompt: (prompt: string) => void;
 }
 
 const LocalStorageContext = createContext<LocalStorageContextType | undefined>(
@@ -25,6 +27,7 @@ export const LocalStorageProvider: React.FC<React.PropsWithChildren> = ({
 }) => {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState<string>('');
 
   const getItem = useCallback((key: string) => {
     return localStorage.getItem(key);
@@ -41,8 +44,10 @@ export const LocalStorageProvider: React.FC<React.PropsWithChildren> = ({
   useEffect(() => {
     const storedCompany = localStorage.getItem("selectedCompany");
     const storedModel = localStorage.getItem("selectedModel");
+    const storedPrompt = localStorage.getItem("prompt");
     if (storedCompany) setSelectedCompany(storedCompany);
     if (storedModel) setSelectedModel(storedModel);
+    if (storedPrompt) setPrompt(storedPrompt);
   }, []);
 
   useEffect(() => {
@@ -56,6 +61,10 @@ export const LocalStorageProvider: React.FC<React.PropsWithChildren> = ({
     else localStorage.removeItem("selectedModel");
   }, [selectedModel]);
 
+  useEffect(() => {
+    localStorage.setItem("prompt", prompt);
+  }, [prompt]);
+
   return (
     <LocalStorageContext.Provider
       value={{
@@ -66,6 +75,8 @@ export const LocalStorageProvider: React.FC<React.PropsWithChildren> = ({
         setSelectedCompany,
         selectedModel,
         setSelectedModel,
+        prompt,
+        setPrompt,
       }}
     >
       {children}

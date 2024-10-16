@@ -15,7 +15,7 @@ const estimateImageTokensOpenAI = (width: number, height: number): number => {
 };
 
 export const estimateTokens = (file: FileInfo, company: string): number => {
-    if (file.type === 'text') {
+    if (file.type != 'image') {
         return Math.ceil((file.characterCount ?? 0) / 4);
     } else if (file.type === 'image' && file.dimensions) {
         // console.log(file.name, file.dimensions)

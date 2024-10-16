@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface FileInfo {
     name: string;
     uploadDate: string;
     size: number;
-    type: 'text' | 'image';
+    type: 'text' | 'image' | 'pdf';
     content: string; // Base64 for images, text content for text files
     characterCount?: number; // Only for text files
     dimensions?: { width: number; height: number }; // Only for image files

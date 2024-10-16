@@ -18,6 +18,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/api/test.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "pages/api/test.js", "src/types/pdf-parse.d.ts"],
   "exclude": ["node_modules"]
 }

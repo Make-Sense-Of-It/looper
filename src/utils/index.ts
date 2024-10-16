@@ -47,3 +47,44 @@ export async function getCompanyAndModel(
 
     return { company, model };
 }
+
+export const isImageFile = (fileName: string): boolean => {
+    const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+    return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+};
+
+export const isHiddenOrSystemFile = (fileName: string): boolean => {
+    // Split the path into components
+    const pathComponents = fileName.split('/');
+
+    // Check each component of the path
+    for (const component of pathComponents) {
+        const hiddenFilePatterns = [
+            /^\./,                // Files starting with a dot
+            /^__MACOSX$/,         // macOS specific folder
+            /^\.DS_Store$/,       // macOS desktop services store
+            /^Thumbs\.db$/,       // Windows thumbnail cache
+            /^\._.*/,             // macOS resource fork files
+            /^desktop\.ini$/      // Windows desktop settings
+        ];
+
+        if (hiddenFilePatterns.some(pattern => pattern.test(component))) {
+            console.log(`File ${fileName} is hidden (matched ${component})`);
+            return true;
+        }
+    }
+
+    console.log(`File ${fileName} is not hidden`);
+    return false;
+};
+
+export const getImageDimensions = (base64: string): Promise<{ width: number; height: number }> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            resolve({ width: img.width, height: img.height });
+        };
+        img.onerror = reject;
+        img.src = base64;
+    });
+};

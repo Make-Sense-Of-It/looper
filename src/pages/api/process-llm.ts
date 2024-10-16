@@ -1,4 +1,5 @@
 // @/src/pages/api/process-llm.ts
+// This file probably just needs to be deleted?
 import type { NextApiRequest, NextApiResponse } from "next";
 import formidable from "formidable";
 import fs from "fs/promises";
@@ -32,6 +33,10 @@ async function parseForm(
     });
   });
 }
+
+const handleError = (errorResponse: { message: string; status: number }) => {
+  console.log(errorResponse)
+};
 
 export default async function handler(
   req: NextApiRequest,
@@ -87,7 +92,7 @@ export default async function handler(
         : fileContent
     };
 
-    const result = await processFile(fileData, apiKey, model, prompt, company);
+    const result = await processFile(fileData, apiKey, model, prompt, company, handleError);
     res.write(
       `data: ${JSON.stringify({
         filename: uploadedFile.originalFilename,

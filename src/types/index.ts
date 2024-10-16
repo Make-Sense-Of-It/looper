@@ -23,3 +23,9 @@ export interface FileData {
     type: 'text' | 'image';
     content: string | { type: string; data: string };
 }
+
+export interface ErrorResponse {
+    message: string;
+    status: number;
+    details?: any;
+}

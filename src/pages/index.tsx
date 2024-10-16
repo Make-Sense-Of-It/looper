@@ -12,6 +12,7 @@ import Results from "../components/ui/Results";
 import ProgressBar from "../components/ui/ProgressBar";
 import DownloadButton from "../components/ui/DownloadButton";
 import SectionTitle from "../components/ui/SectionTitle";
+import ErrorComponent from "../components/ui/Error";
 
 const Home: React.FC = () => {
   return (
@@ -41,6 +42,7 @@ const Home: React.FC = () => {
           <Results />
         </Flex>
       </div>
+      <ErrorComponent />
     </Layout>
   );
 };

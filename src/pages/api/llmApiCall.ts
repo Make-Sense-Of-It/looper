@@ -36,7 +36,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({ result });
   } catch (error) {
     console.error('Error in llmApiCall:', error);
-    res.status(500).json({ error: 'Internal Server Error', details: (error as Error).message });
+    if (error instanceof ApiError) {
+      res.status(error.status).json({ error: error.message, details: error.details });
+    } else {
+      res.status(500).json({ error: 'Internal Server Error', details: (error as Error).message });
+    }
+  }
+}
+
+class ApiError extends Error {
+  constructor(public status: number, public message: string, public details: any) {
+    super(message);
+    this.name = 'ApiError';
   }
 }
 
@@ -115,7 +126,7 @@ export async function llmApiCall({
   }
 
   try {
-    console.log(`Body: ${JSON.stringify(body, null, 2)}`);
+    // console.log(`Body: ${JSON.stringify(body, null, 2)}`);
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -124,12 +135,22 @@ export async function llmApiCall({
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
+      const errorBody = await response.json();
       console.error(`API response: ${response.status} ${response.statusText}`);
-      console.error(`Error body: ${errorBody}`);
-      throw new Error(
-        `API call failed: ${response.status} ${response.statusText}\nError body: ${errorBody}`
-      );
+      console.error(`Error body: ${JSON.stringify(errorBody, null, 2)}`);
+
+      let errorMessage = 'An error occurred while processing your request';
+      let errorDetails = errorBody;
+
+      if (company === "Anthropic" && errorBody.error) {
+        errorMessage = errorBody.error.message || errorMessage;
+        errorDetails = errorBody.error;
+      } else if (company === "OpenAI" && errorBody.error) {
+        errorMessage = errorBody.error.message || errorMessage;
+        errorDetails = errorBody.error;
+      }
+
+      throw new ApiError(response.status, errorMessage, errorDetails);
     }
 
     const result = await response.json();
@@ -139,6 +160,10 @@ export async function llmApiCall({
       : result.choices[0].message.content;
   } catch (error) {
     console.error("Error in llmApiCall:", error);
-    throw error;
+    if (error instanceof ApiError) {
+      throw error;
+    } else {
+      throw new ApiError(500, 'An unexpected error occurred', (error as Error).message);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Model, Company } from "../types";
+import { Model, Company, ErrorResponse } from "../types";
 
 interface FileData {
     name: string;
@@ -11,55 +11,47 @@ export async function processFile(
     apiKey: string,
     model: Model,
     prompt: string,
-    company: Company
-): Promise<string> {
-    if (process.env.NEXT_PUBLIC_USE_MOCK_API === "TRUE") {
-        // Call the mock API
-        const mockApiResponse = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    apiKey,
-                    model: model.name,
-                    prompt,
-                    fileContent: fileData.content,
-                    fileType: fileData.type,
-                }),
-            }
-        );
+    company: Company,
+    onError: (error: ErrorResponse) => void
+): Promise<string | null> {
+    try {
+        const apiUrl = process.env.NEXT_PUBLIC_USE_MOCK_API === "TRUE"
+            ? `${process.env.NEXT_PUBLIC_API_URL}/api/mockApiCall`
+            : `${process.env.NEXT_PUBLIC_API_URL}/api/llmApiCall`;
 
-        if (!mockApiResponse.ok) {
-            throw new Error("Failed to process the file");
-        }
-
-        const llmResponse = await mockApiResponse.json();
-        return llmResponse.result;
-    } else {
-        // Call the actual API
-        const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/llmApiCall`, {
-            method: 'POST',
+        const response = await fetch(apiUrl, {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
             },
             body: JSON.stringify({
                 apiKey,
                 model: model.name,
                 prompt,
                 fileContent: fileData.content,
-                company: company.name,
                 fileType: fileData.type,
+                company: company.name,
             }),
         });
 
-        if (!apiResponse.ok) {
-            throw new Error("Failed to process the file");
+        if (!response.ok) {
+            const errorData = await response.json();
+            onError({
+                message: errorData.error || "Failed to process the file",
+                status: response.status,
+                details: errorData.details || {}
+            });
+            return null;
         }
 
-        const llmResponse = await apiResponse.json();
+        const llmResponse = await response.json();
         return llmResponse.result;
+    } catch (error) {
+        onError({
+            message: "An unexpected error occurred",
+            status: 500,
+            details: (error as Error).message
+        });
+        return null;
     }
 }

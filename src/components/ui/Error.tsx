@@ -29,19 +29,23 @@ const ErrorComponent: React.FC = () => {
     return (
         <AlertDialog.Root open={true}>
             <AlertDialog.Content>
-                <Flex direction="column" gap="3">
+                <AlertDialog.Title>
                     <Flex align="center" gap="2">
                         <ExclamationTriangleIcon width="16" height="16" color="gray" />
                         <Text size="5" weight="bold">{title}</Text>
                     </Flex>
-                    <Text>{message}</Text>
-                    {suggestion && (
-                        <Text size="2" color="gray">{suggestion}</Text>
-                    )}
-                    <Flex justify="end">
-                        <Button onClick={handleClose}>Close</Button>
+                </AlertDialog.Title>
+                <AlertDialog.Description size="2">
+                    <Flex direction="column" gap="3">
+                        <Text>{message}</Text>
+                        {suggestion && (
+                            <Text size="2" color="gray">{suggestion}</Text>
+                        )}
+                        <Flex justify="end">
+                            <Button onClick={handleClose}>Close</Button>
+                        </Flex>
                     </Flex>
-                </Flex>
+                </AlertDialog.Description>
             </AlertDialog.Content>
         </AlertDialog.Root>
     );

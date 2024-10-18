@@ -69,12 +69,12 @@ export const isHiddenOrSystemFile = (fileName: string): boolean => {
         ];
 
         if (hiddenFilePatterns.some(pattern => pattern.test(component))) {
-            console.log(`File ${fileName} is hidden (matched ${component})`);
+            // console.log(`File ${fileName} is hidden (matched ${component})`);
             return true;
         }
     }
 
-    console.log(`File ${fileName} is not hidden`);
+    // console.log(`File ${fileName} is not hidden`);
     return false;
 };
 

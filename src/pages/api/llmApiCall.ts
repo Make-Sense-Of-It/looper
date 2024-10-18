@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { convertToApiModelNameUsingCompanyString } from "@/src/utils/modelUtils";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -17,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log(req.body);
+    // console.log(req.body);
     const { apiKey, model, prompt, fileContent, company, fileType } = req.body;
 
     if (!apiKey || !model || !prompt || !fileContent || !company || !fileType) {
@@ -126,7 +127,7 @@ export async function llmApiCall({
   }
 
   try {
-    // console.log(`Body: ${JSON.stringify(body, null, 2)}`);
+    // console.log(`Response body: ${body}`);
 
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -134,26 +135,41 @@ export async function llmApiCall({
       body: JSON.stringify(body),
     });
 
+    const responseText = await response.text();
+    console.log(`Response status: ${response.status} ${response.statusText}`);
+    console.log(`Response body: ${responseText}`);
+
     if (!response.ok) {
-      const errorBody = await response.json();
-      console.error(`API response: ${response.status} ${response.statusText}`);
-      console.error(`Error body: ${JSON.stringify(errorBody, null, 2)}`);
-
       let errorMessage = 'An error occurred while processing your request';
-      let errorDetails = errorBody;
+      let errorDetails: any = { responseBody: responseText };
 
-      if (company === "Anthropic" && errorBody.error) {
-        errorMessage = errorBody.error.message || errorMessage;
-        errorDetails = errorBody.error;
-      } else if (company === "OpenAI" && errorBody.error) {
-        errorMessage = errorBody.error.message || errorMessage;
-        errorDetails = errorBody.error;
+      try {
+        const errorBody = JSON.parse(responseText);
+        if (company === "Anthropic" && errorBody.error) {
+          errorMessage = errorBody.error.message || errorMessage;
+          errorDetails = { ...errorDetails, apiError: errorBody.error };
+        } else if (company === "OpenAI" && errorBody.error) {
+          errorMessage = errorBody.error.message || errorMessage;
+          errorDetails = { ...errorDetails, apiError: errorBody.error };
+        }
+      } catch (parseError) {
+        console.error("Error parsing error response:", parseError);
+        errorDetails.parseError = (parseError as Error).message;
       }
 
       throw new ApiError(response.status, errorMessage, errorDetails);
     }
 
-    const result = await response.json();
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("Error parsing successful response:", parseError);
+      throw new ApiError(500, 'Error parsing API response', {
+        parseError: (parseError as Error).message,
+        responseBody: responseText
+      });
+    }
 
     return company === "Anthropic"
       ? result.content[0].text
@@ -163,7 +179,10 @@ export async function llmApiCall({
     if (error instanceof ApiError) {
       throw error;
     } else {
-      throw new ApiError(500, 'An unexpected error occurred', (error as Error).message);
+      throw new ApiError(500, 'An unexpected error occurred', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
     }
   }
 }

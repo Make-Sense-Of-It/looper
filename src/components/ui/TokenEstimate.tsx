@@ -3,8 +3,8 @@ import { useFileAnalysis } from "../../providers/FileAnalysisProvider";
 import { useLocalStorage } from "../../providers/LocalStorageContext";
 import { Button, Dialog, Flex, IconButton } from "@radix-ui/themes";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
-import { calculateTotalTokens, calculateCost, estimateTokens } from "../../utils/tokenEstimation";
-import { FileInfo } from "../../types";
+import { calculateTotalTokens, calculateCost } from "../../utils/tokenEstimation";
+// import { FileInfo } from "../../types";
 
 const TokenEstimate: React.FC = () => {
     const { files } = useFileAnalysis();

@@ -13,7 +13,7 @@ const ResultItem: React.FC<ResultItemProps> = ({ filename, result }) => {
     return (
         <Card className="mb-4">
             <div className="flex justify-between items-center mb-2">
-                <Text as="div" size="2" weight="bold">{filename}</Text>
+                <Text as="div" size="2" weight="bold" truncate>{filename}</Text>
                 <Button variant="ghost" onClick={() => setIsExpanded(!isExpanded)}>
                     {isExpanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
                 </Button>

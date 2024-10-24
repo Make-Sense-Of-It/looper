@@ -1,3 +1,4 @@
+// PromptTextArea.tsx
 import React from 'react';
 import { Flex, TextArea, Dialog, IconButton, Button } from '@radix-ui/themes';
 import { QuestionMarkCircledIcon } from '@radix-ui/react-icons';
@@ -12,7 +13,7 @@ const PromptTextArea: React.FC = () => {
     };
 
     return (
-        <Flex direction="column" width="full" gap="2">
+        <Flex direction="column" width="full" gap="2" className='flex-grow'>
             <Flex align="center" justify={"between"} gap="1" pr="1">
                 <SectionTitle>Your prompt</SectionTitle>
                 <Dialog.Root>
@@ -38,7 +39,7 @@ const PromptTextArea: React.FC = () => {
             </Flex>
             <TextArea
                 size="2"
-                className='w-full h-40 lg:h-52'
+                className='w-full h-24 lg:h-32'
                 placeholder="Enter your prompt here"
                 value={prompt}
                 onChange={handlePromptChange}

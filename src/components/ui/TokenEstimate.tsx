@@ -1,3 +1,4 @@
+// TokenEstimate.tsx
 import React, { useMemo } from "react";
 import { useFileAnalysis } from "../../providers/FileAnalysisProvider";
 import { useLocalStorage } from "../../providers/LocalStorageContext";

@@ -1,3 +1,5 @@
+// FileUpload.tsx
+
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { UploadIcon } from "@radix-ui/react-icons";

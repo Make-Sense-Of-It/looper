@@ -1,6 +1,6 @@
 // src/components/Layout.tsx
 import React, { ReactNode } from "react";
-import { Box, Container, Flex } from "@radix-ui/themes";
+import { Box, Flex } from "@radix-ui/themes";
 // import Footer from "./Footer";
 import Header from "./Header";
 
@@ -13,11 +13,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <Flex direction="column" height="100vh">
       <Box>
         <Header />
-        <Container>
+        {/* <Container> */}
           <Flex direction="column" width={"full"} className="">
             {children}
           </Flex>
-        </Container>
+        {/* </Container> */}
       </Box>
     </Flex>
   );

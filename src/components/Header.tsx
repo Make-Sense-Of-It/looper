@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const Header: React.FC = () => {
   return (
-    <header className="h-16 bg-bronze-1 p-4 border-b border-bronze-3">
+    <header className="fixed w-full z-10 h-16 bg-bronze-1 p-4 border-b border-bronze-3">
       {/* <Section size="1" pt="1"> */}
         <Flex align="center" justify={"between"} gap="3">
           <Box>

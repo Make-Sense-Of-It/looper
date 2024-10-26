@@ -36,7 +36,7 @@ const TokenEstimate: React.FC = () => {
     }
 
     return (
-        <Flex align="center" justify="between" gap="3" className="text-sm">
+        <Flex align="center" justify="between" gap="3" className="bg-bronze-2 p-2 border border-bronze-4 text-bronze-11 rounded-lg text-xs -mt-2">
             <Flex gap="3" direction="column">
                 <Flex gap="3">
                     {fileStats.textFiles.length > 0 && (
@@ -47,8 +47,6 @@ const TokenEstimate: React.FC = () => {
                             {fileStats.avgImageDimensions && ` (avg. ${fileStats.avgImageDimensions.width}x${fileStats.avgImageDimensions.height}px)`}
                         </p>
                     )}
-                </Flex>
-                <Flex gap="3">
                     <p><strong>Prompt</strong>: {promptCharacters.toLocaleString()} characters</p>
                     <p><strong>Est&#39;d tokens</strong>: {totalTokens.toLocaleString()}</p>
                     <p><strong>Est&#39;d input cost</strong>: ${estimatedCost}</p>

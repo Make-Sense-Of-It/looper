@@ -7,6 +7,7 @@ import {
   isImageFile,
   getImageDimensions,
 } from "../utils";
+import { getMaxImageDimension, resizeImage } from "../utils/imageProcessing";
 
 interface FileAnalysisContextType {
   files: FileInfo[];
@@ -14,6 +15,8 @@ interface FileAnalysisContextType {
   processFile: (file: File) => Promise<void>;
   error: string | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  maxImageDimension: number;
+  handleImageResize: () => Promise<void>;
 }
 
 const FileAnalysisContext = createContext<FileAnalysisContextType | undefined>(
@@ -35,6 +38,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [maxImageDimension, setMaxImageDimension] = useState(0);
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
@@ -55,6 +59,11 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
           if (fileInfo) newFiles.push(fileInfo);
         } else {
           throw new Error("Invalid file content");
+        }
+
+        if (newFiles.some((file) => file.type === "image")) {
+          const maxDim = getMaxImageDimension(newFiles);
+          setMaxImageDimension(maxDim);
         }
 
         setFiles(newFiles);
@@ -190,9 +199,46 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     return buf;
   };
 
+  const handleImageResize = async () => {
+    console.log("new files");
+    const newFiles = await Promise.all(
+      files.map(async (file) => {
+        if (file.type === "image") {
+          try {
+            const resizedContent = await resizeImage(file.content as string);
+            return {
+              ...file,
+              content: resizedContent.split(",")[1], // Remove data:image/jpeg;base64, prefix
+              dimensions: await getImageDimensions(
+                `data:image/jpeg;base64,${resizedContent.split(",")[1]}`
+              ),
+            };
+          } catch (error) {
+            console.error(`Failed to resize image ${file.name}:`, error);
+            return file;
+          }
+        }
+        return file;
+      })
+    );
+
+    const maxDim = getMaxImageDimension(newFiles);
+    setMaxImageDimension(maxDim);
+
+    setFiles(newFiles);
+  };
+
   return (
     <FileAnalysisContext.Provider
-      value={{ files, setFiles, processFile, error, setError }}
+      value={{
+        files,
+        setFiles,
+        processFile,
+        error,
+        setError,
+        maxImageDimension,
+        handleImageResize,
+      }}
     >
       {children}
     </FileAnalysisContext.Provider>

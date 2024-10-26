@@ -39,7 +39,9 @@ const PromptContent: React.FC<PromptContentProps> = ({ children }) => (
   </Flex>
 );
 
-const PromptArea = forwardRef<HTMLDivElement>((_, ref) => (
+type PromptAreaProps = React.PropsWithChildren;
+
+const PromptArea = forwardRef<HTMLDivElement, PromptAreaProps>((props, ref) => (
   <PromptAreaContainer ref={ref}>
     <Flex direction="column" gap="2">
       <TokenEstimate />

@@ -3,14 +3,15 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 import { useLocalStorage } from "./LocalStorageContext";
 import { useFileAnalysis } from "./FileAnalysisProvider";
 import { getCompanyAndModel, getMimeType } from "../utils";
-import { ErrorResponse, FileData } from "../types";
+import {
+  ErrorResponse,
+  FileData,
+  Conversation,
+  ProcessingResult,
+} from "../types";
 import { processFile } from "../utils/processFile";
-
-interface ProcessingResult {
-  filename: string;
-  result: string;
-  prompt: string; // Add prompt to results for display
-}
+import { useConversation } from "./ConversationProvider";
+import { generateUniqueId } from "../utils/indexdb";
 
 interface FileProcessingContextType {
   isLoading: boolean;
@@ -45,8 +46,10 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const [processedFiles, setProcessedFiles] = useState(0);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [prompt, setPrompt] = useState("");
+
   const { getItem, selectedCompany, selectedModel } = useLocalStorage();
   const { files, setFiles } = useFileAnalysis();
+  const { saveConversationData } = useConversation();
 
   const clearError = () => setError(null);
 
@@ -81,7 +84,26 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     setProcessedFiles(0);
     clearError();
 
-    const currentPrompt = prompt; // Store current prompt for results
+    const createInitialConversationState = async (
+      conversationId: string
+    ): Promise<Conversation> => {
+      return {
+        id: conversationId,
+        createdAt: new Date(),
+        prompt: prompt,
+        files: [],
+        results: [],
+        company: selectedCompany ?? "",
+        model: selectedModel ?? "",
+      };
+    };
+
+    const conversationId = await generateUniqueId();
+    const currentConversationState = await createInitialConversationState(
+      conversationId
+    );
+
+    const processedResults: ProcessingResult[] = [];
 
     for (const fileInfo of files) {
       try {
@@ -89,6 +111,9 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
           selectedCompany ?? "",
           selectedModel ?? ""
         );
+
+        currentConversationState.company = selectedCompany ?? "";
+        currentConversationState.model = selectedModel ?? "";
 
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileInfo.name);
         const mimeType = getMimeType(fileInfo.name);
@@ -113,20 +138,21 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
           fileData,
           apiKey,
           model,
-          currentPrompt,
+          prompt,
           company,
           handleError
         );
 
         if (result !== null) {
-          setResults((prevResults) => [
-            ...prevResults,
-            {
-              filename: fileInfo.name,
-              result,
-              prompt: currentPrompt,
-            },
-          ]);
+          const processedResult = {
+            filename: fileInfo.name,
+            result,
+            prompt: prompt,
+          };
+
+          processedResults.push(processedResult);
+
+          setResults((prevResults) => [...prevResults, processedResult]);
           setProcessedFiles((prev) => prev + 1);
         } else {
           break;
@@ -141,6 +167,15 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
         break;
       }
     }
+
+    const finalConversationState = {
+      ...currentConversationState,
+      results: processedResults,
+      files: files,
+    };
+    // console.log(finalConversationState);
+
+    await saveConversationData(finalConversationState);
 
     setIsLoading(false);
     setPrompt("");

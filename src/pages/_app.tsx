@@ -6,17 +6,20 @@ import "../styles/globals.css";
 import "@radix-ui/themes/styles.css";
 import { FileAnalysisProvider } from "../providers/FileAnalysisProvider";
 import { FileProcessingProvider } from "../providers/FileProcessingProvider";
+import { ConversationProvider } from "../providers/ConversationProvider";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <LocalStorageProvider>
-      <FileAnalysisProvider>
-        <FileProcessingProvider>
-          <Theme accentColor="gold">
-            <Component {...pageProps} />
-          </Theme>
-        </FileProcessingProvider>
-      </FileAnalysisProvider>
+      <ConversationProvider>
+        <FileAnalysisProvider>
+          <FileProcessingProvider>
+            <Theme accentColor="gold">
+              <Component {...pageProps} />
+            </Theme>
+          </FileProcessingProvider>
+        </FileAnalysisProvider>
+      </ConversationProvider>
     </LocalStorageProvider>
   );
 }

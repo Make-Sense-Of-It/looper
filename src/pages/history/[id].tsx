@@ -7,7 +7,6 @@ import ConversationLayout from "@/src/components/ui/ConversationLayout";
 import Layout from "../../components/Layout";
 import ResultItem from "@/src/components/ui/ResultItem";
 import UserPromptItem from "@/src/components/ui/UserPromptItem";
-import ConversationDownloadMenu from "@/src/components/ui/ConversationDownloadMenu";
 
 const ConversationIdPage: React.FC = () => {
   const router = useRouter();
@@ -103,10 +102,7 @@ const ConversationIdPage: React.FC = () => {
       <div className="max-w-2xl mx-auto py-5 relative">
         <div className="space-y-5">
           {allConversations.map((conv) => (
-            <div
-              key={conv.id}
-              className="relative rounded-lg p-4"
-            >
+            <div key={conv.id} className="relative rounded-lg p-4">
               <div className="fixed p-2 top-16 right-14 mt-1.5">
                 {/* <div className="font-medium">Prompt: {conv.prompt}</div> */}
               </div>

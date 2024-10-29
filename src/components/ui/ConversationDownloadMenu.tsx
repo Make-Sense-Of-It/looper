@@ -33,7 +33,8 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
     });
 
     const content = await zip.generateAsync({ type: "blob" });
-    saveAs(content, `conversation_${conversation.id}.zip`);
+    const formattedDate = formatDate(conversationGroup.createdAt);
+    saveAs(content, `${formattedDate} ${conversation.prompt.slice(0, 12)}...`);
   };
 
   const handleDownloadAll = async () => {

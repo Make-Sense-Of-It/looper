@@ -5,6 +5,7 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useRef,
 } from "react";
 import { useLocalStorage } from "./LocalStorageContext";
 import { useFileAnalysis } from "./FileAnalysisProvider";
@@ -24,12 +25,14 @@ interface FileProcessingContextType {
   results: ProcessingResult[];
   processedFiles: number;
   processFiles: () => Promise<void>;
+  cancelProcessing: () => void;
   error: ErrorResponse | null;
   clearError: () => void;
   prompt: string;
   setPrompt: (prompt: string) => void;
   clearProcessingState: () => void;
   currentProcessingConversation: Conversation | null;
+  isCancelling: boolean;
 }
 
 const FileProcessingContext = createContext<
@@ -40,12 +43,15 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [results, setResults] = useState<ProcessingResult[]>([]);
   const [processedFiles, setProcessedFiles] = useState(0);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [prompt, setPrompt] = useState("");
   const [currentProcessingConversation, setCurrentProcessingConversation] =
     useState<Conversation | null>(null);
+
+  const cancelRef = useRef(false);
 
   const { getItem, selectedCompany, selectedModel } = useLocalStorage();
   const { files, setFiles } = useFileAnalysis();
@@ -56,13 +62,21 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const handleError = (errorResponse: { message: string; status: number }) => {
     setError(errorResponse);
     setIsLoading(false);
+    setIsCancelling(false);
   };
+
+  const cancelProcessing = useCallback(() => {
+    cancelRef.current = true;
+    setIsCancelling(true);
+  }, []);
 
   const createInitialConversationState = async (): Promise<Conversation> => {
     const conversationId = await generateUniqueId();
     const group =
       currentGroup ||
-      (await createGroup(`${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`));
+      (await createGroup(
+        `${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`
+      ));
 
     return {
       id: conversationId,
@@ -77,7 +91,9 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const processFiles = async () => {
+    cancelRef.current = false;
     setCurrentProcessingConversation(null);
+
     if (files.length === 0) {
       setError({
         message: "Please upload a file first.",
@@ -103,11 +119,16 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     setProcessedFiles(0);
     clearError();
 
-    let currentConversation = await createInitialConversationState(); // Change to let
+    let currentConversation = await createInitialConversationState();
     setCurrentProcessingConversation(currentConversation);
     await saveConversationData(currentConversation);
 
     for (const fileInfo of files) {
+      if (cancelRef.current) {
+        console.log("Processing cancelled");
+        break;
+      }
+
       try {
         const { company, model } = await getCompanyAndModel(
           selectedCompany ?? "",
@@ -152,11 +173,9 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
             prompt: prompt,
           };
 
-          // Update both local state and conversation
           setResults((prevResults) => [...prevResults, processedResult]);
           setProcessedFiles((prev) => prev + 1);
 
-          // Update the current conversation with accumulated results
           currentConversation = {
             ...currentConversation,
             results: [...currentConversation.results, processedResult],
@@ -180,6 +199,7 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoading(false);
+    setIsCancelling(false);
     setPrompt("");
     setFiles([]);
   };
@@ -187,10 +207,11 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const clearProcessingState = useCallback(() => {
     setCurrentProcessingConversation(null);
     setIsLoading(false);
+    setIsCancelling(false);
     setPrompt("");
     setFiles([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    cancelRef.current = false;
+  }, [setFiles]);
 
   return (
     <FileProcessingContext.Provider
@@ -199,12 +220,14 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
         results,
         processedFiles,
         processFiles,
+        cancelProcessing,
         error,
         clearError,
         prompt,
         setPrompt,
         clearProcessingState,
         currentProcessingConversation,
+        isCancelling,
       }}
     >
       {children}

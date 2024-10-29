@@ -1,5 +1,11 @@
 // FileProcessingProvider.tsx
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
 import { useLocalStorage } from "./LocalStorageContext";
 import { useFileAnalysis } from "./FileAnalysisProvider";
 import { getCompanyAndModel, getMimeType } from "../utils";
@@ -22,21 +28,13 @@ interface FileProcessingContextType {
   clearError: () => void;
   prompt: string;
   setPrompt: (prompt: string) => void;
+  clearProcessingState: () => void;
+  currentProcessingConversation: Conversation | null;
 }
 
 const FileProcessingContext = createContext<
   FileProcessingContextType | undefined
 >(undefined);
-
-export const useFileProcessing = () => {
-  const context = useContext(FileProcessingContext);
-  if (context === undefined) {
-    throw new Error(
-      "useFileProcessing must be used within a FileProcessingProvider"
-    );
-  }
-  return context;
-};
 
 export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -46,10 +44,12 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const [processedFiles, setProcessedFiles] = useState(0);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [currentProcessingConversation, setCurrentProcessingConversation] =
+    useState<Conversation | null>(null);
 
   const { getItem, selectedCompany, selectedModel } = useLocalStorage();
   const { files, setFiles } = useFileAnalysis();
-  const { saveConversationData } = useConversation();
+  const { saveConversationData, currentGroup, createGroup } = useConversation();
 
   const clearError = () => setError(null);
 
@@ -58,7 +58,26 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     setIsLoading(false);
   };
 
+  const createInitialConversationState = async (): Promise<Conversation> => {
+    const conversationId = await generateUniqueId();
+    const group =
+      currentGroup ||
+      (await createGroup(`${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`));
+
+    return {
+      id: conversationId,
+      groupId: group.id,
+      createdAt: new Date(),
+      prompt: prompt,
+      files: [],
+      results: [],
+      company: selectedCompany ?? "",
+      model: selectedModel ?? "",
+    };
+  };
+
   const processFiles = async () => {
+    setCurrentProcessingConversation(null);
     if (files.length === 0) {
       setError({
         message: "Please upload a file first.",
@@ -84,26 +103,9 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     setProcessedFiles(0);
     clearError();
 
-    const createInitialConversationState = async (
-      conversationId: string
-    ): Promise<Conversation> => {
-      return {
-        id: conversationId,
-        createdAt: new Date(),
-        prompt: prompt,
-        files: [],
-        results: [],
-        company: selectedCompany ?? "",
-        model: selectedModel ?? "",
-      };
-    };
-
-    const conversationId = await generateUniqueId();
-    const currentConversationState = await createInitialConversationState(
-      conversationId
-    );
-
-    const processedResults: ProcessingResult[] = [];
+    let currentConversation = await createInitialConversationState(); // Change to let
+    setCurrentProcessingConversation(currentConversation);
+    await saveConversationData(currentConversation);
 
     for (const fileInfo of files) {
       try {
@@ -112,8 +114,8 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
           selectedModel ?? ""
         );
 
-        currentConversationState.company = selectedCompany ?? "";
-        currentConversationState.model = selectedModel ?? "";
+        currentConversation.company = selectedCompany ?? "";
+        currentConversation.model = selectedModel ?? "";
 
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileInfo.name);
         const mimeType = getMimeType(fileInfo.name);
@@ -150,10 +152,19 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
             prompt: prompt,
           };
 
-          processedResults.push(processedResult);
-
+          // Update both local state and conversation
           setResults((prevResults) => [...prevResults, processedResult]);
           setProcessedFiles((prev) => prev + 1);
+
+          // Update the current conversation with accumulated results
+          currentConversation = {
+            ...currentConversation,
+            results: [...currentConversation.results, processedResult],
+            files: [...currentConversation.files, fileInfo],
+          };
+
+          setCurrentProcessingConversation(currentConversation);
+          await saveConversationData(currentConversation);
         } else {
           break;
         }
@@ -168,19 +179,18 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
 
-    const finalConversationState = {
-      ...currentConversationState,
-      results: processedResults,
-      files: files,
-    };
-    // console.log(finalConversationState);
-
-    await saveConversationData(finalConversationState);
-
     setIsLoading(false);
     setPrompt("");
     setFiles([]);
   };
+
+  const clearProcessingState = useCallback(() => {
+    setCurrentProcessingConversation(null);
+    setIsLoading(false);
+    setPrompt("");
+    setFiles([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <FileProcessingContext.Provider
@@ -193,9 +203,21 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
         clearError,
         prompt,
         setPrompt,
+        clearProcessingState,
+        currentProcessingConversation,
       }}
     >
       {children}
     </FileProcessingContext.Provider>
   );
+};
+
+export const useFileProcessing = () => {
+  const context = useContext(FileProcessingContext);
+  if (!context) {
+    throw new Error(
+      "useFileProcessing must be used within a FileProcessingProvider"
+    );
+  }
+  return context;
 };

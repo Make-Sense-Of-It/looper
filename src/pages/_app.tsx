@@ -7,6 +7,7 @@ import "@radix-ui/themes/styles.css";
 import { FileAnalysisProvider } from "../providers/FileAnalysisProvider";
 import { FileProcessingProvider } from "../providers/FileProcessingProvider";
 import { ConversationProvider } from "../providers/ConversationProvider";
+// import { MemoryMonitorProvider } from "../providers/MemoryMonitorProvider";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -14,9 +15,11 @@ function MyApp({ Component, pageProps }: AppProps) {
       <ConversationProvider>
         <FileAnalysisProvider>
           <FileProcessingProvider>
-            <Theme accentColor="gold">
-              <Component {...pageProps} />
-            </Theme>
+            {/* <MemoryMonitorProvider> */}
+              <Theme accentColor="gold">
+                <Component {...pageProps} />
+              </Theme>
+            {/* </MemoryMonitorProvider> */}
           </FileProcessingProvider>
         </FileAnalysisProvider>
       </ConversationProvider>

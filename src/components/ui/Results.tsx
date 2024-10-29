@@ -87,8 +87,8 @@ const Results: React.FC = () => {
                     >
                       <ResultItem
                         filename={result.filename}
-                        result={result.result}
-                      />
+                        result={result.result} 
+                        id={`${groupIndex}`} index={index}                      />
                     </div>
                   );
                 })}

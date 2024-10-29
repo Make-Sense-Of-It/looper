@@ -39,10 +39,18 @@ export interface Conversation {
   results: ProcessingResult[];
   company?: string;
   model?: string;
+  groupId: string;
 }
 
 export interface ProcessingResult {
   filename: string;
   result: string;
   prompt: string;
+}
+
+export interface ConversationGroup {
+  id: string;
+  name: string;
+  createdAt: Date;
+  conversations: Conversation[];
 }

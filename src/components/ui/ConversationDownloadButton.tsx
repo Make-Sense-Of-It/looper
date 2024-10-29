@@ -1,10 +1,10 @@
 // components/ui/ConversationDownloadButton.tsx
 import React from "react";
-import { Button } from "@radix-ui/themes";
 import { DownloadIcon } from "@radix-ui/react-icons";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { Conversation } from "../../types";
+import LooperBaseButton from "./LooperBaseButton";
 
 interface ConversationDownloadButtonProps {
   conversation: Conversation;
@@ -36,10 +36,10 @@ const ConversationDownloadButton: React.FC<ConversationDownloadButtonProps> = ({
   };
 
   return (
-    <Button onClick={handleDownload} variant="soft">
-      <DownloadIcon width="16" height="16" />
+    <LooperBaseButton onClick={handleDownload}>
+      <DownloadIcon width="24" height="16" className="pr-2" />
       Download
-    </Button>
+    </LooperBaseButton>
   );
 };
 

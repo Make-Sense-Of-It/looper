@@ -12,18 +12,23 @@ const ProcessButton: React.FC = () => {
     cancelProcessing,
     isCancelling,
     processedFiles,
+    interruptedFileIndex,
+    // error,
   } = useFileProcessing();
   const { files } = useFileAnalysis();
-
+  // console.log("interruptedFileIndex", interruptedFileIndex);
+  // console.log("processedFiles", processedFiles)
+  // console.log("files.length", files.length)
   const handleClick = () => {
     if (isLoading) {
       cancelProcessing();
     } else {
-      processFiles();
+      processFiles(
+        interruptedFileIndex !== null ? interruptedFileIndex + 1 : 0
+      );
     }
   };
 
-  // Determine the button variant based on state
   const buttonVariant = isCancelling
     ? "cancelling"
     : isLoading
@@ -56,13 +61,17 @@ const ProcessButton: React.FC = () => {
                 r="11"
                 fill="none"
                 stroke="currentColor"
-                stroke-width="2"
+                strokeWidth="2"
               />
               <rect x="7" y="7" width="10" height="10" fill="currentColor" />
             </svg>
           </Tooltip>
         </>
       );
+    }
+
+    if (interruptedFileIndex !== null && processedFiles < files.length) {
+      return "Continue processing";
     }
     return "Process files";
   };

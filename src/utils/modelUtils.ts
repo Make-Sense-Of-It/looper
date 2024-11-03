@@ -5,7 +5,7 @@ export function convertToApiModelName(modelName: string, company: Company): stri
     // Anthropic model name conversion
     switch (modelName) {
       case "Claude 3.5 Sonnet":
-        return "claude-3-5-sonnet-20240620";
+        return "claude-3-5-sonnet-20241022";
       case "Claude 3 Haiku":
         return "claude-3-haiku-20240307";
       default:

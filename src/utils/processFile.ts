@@ -1,3 +1,4 @@
+// @/utils/processFiles.ts
 import { Model, Company, ErrorResponse } from "../types";
 
 interface FileData {

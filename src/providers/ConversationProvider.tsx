@@ -40,7 +40,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   // Memoize handlers to prevent unnecessary rerenders
   const saveConversationData = useCallback(
     async (conversation: Conversation) => {
-      console.log("Saving conversation:", conversation.id);
+      // console.log("Saving conversation:", conversation.id);
       try {
         await saveConversation(conversation);
         setCurrentConversation(conversation);
@@ -49,7 +49,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         if (currentGroup && currentGroup.id === conversation.groupId) {
           const updatedGroup = await getConversationGroup(currentGroup.id);
           if (updatedGroup) {
-            console.log("Updating current group after save");
+            // console.log("Updating current group after save");
             setCurrentGroup(updatedGroup);
           }
         }
@@ -62,7 +62,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const loadGroup = useCallback(async (id: string) => {
-    console.log("Loading group:", id);
+    // console.log("Loading group:", id);
     try {
       const group = await getConversationGroup(id);
       if (group) {
@@ -77,7 +77,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const deleteGroup = useCallback(
     async (id: string) => {
-      console.log("Deleting group:", id);
+      // console.log("Deleting group:", id);
       try {
         await deleteConversationGroup(id);
         if (currentGroup?.id === id) {
@@ -93,7 +93,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const createGroup = useCallback(async (name: string) => {
-    console.log("Creating new group:", name);
+    // console.log("Creating new group:", name);
     return createConversationGroup(name);
   }, []);
 

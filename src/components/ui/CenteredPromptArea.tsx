@@ -1,10 +1,10 @@
-import React from "react";
 import { Box, Flex } from "@radix-ui/themes";
-import PromptTextArea from "./PromptTextArea";
-import FileUpload from "./FileUpload";
-import ProcessButton from "./ProcessButton";
-import TokenEstimate from "./TokenEstimate";
 import { motion } from "framer-motion";
+import React from "react";
+import FileUpload from "./FileUpload";
+import PromptContent from "./PromptArea";
+import PromptTextArea from "./PromptTextArea";
+import TokenEstimate from "./TokenEstimate";
 
 const CenteredPromptArea: React.FC = () => {
   return (
@@ -31,19 +31,3 @@ const CenteredPromptArea: React.FC = () => {
 };
 
 export default CenteredPromptArea;
-
-type PromptContentProps = {
-  children: [React.ReactElement, React.ReactElement];
-};
-
-const PromptContent: React.FC<PromptContentProps> = ({ children }) => (
-  <Flex gap="4" className="w-full">
-    <Box className="flex-grow basis-2/3">{children[0]}</Box>
-    <Box className="flex-grow basis-1/3 flex flex-col justify-between">
-      <FileUpload />
-      <Box className="mt-4">
-        <ProcessButton />
-      </Box>
-    </Box>
-  </Flex>
-);

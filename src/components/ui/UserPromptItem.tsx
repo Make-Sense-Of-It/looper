@@ -8,9 +8,11 @@ interface UserPromptItemProps {
 }
 
 const UserPromptItem = forwardRef<HTMLDivElement, UserPromptItemProps>(
-  ({ prompt, fileCount = 0, fileType = "unknown" }) => {
+  function UserPromptItem(props, ref) {
+    const { prompt, fileCount = 0, fileType = "unknown" } = props;
+
     return (
-      <Card className="w-[70%] ml-auto mb-2">
+      <Card className="w-[70%] ml-auto mb-2" ref={ref}>
         <Inset>
           <div className="flex flex-col gap-3 bg-bronze-12 text-bronze-1 p-3">
             <Text as="div" size="3" className="whitespace-pre-wrap text-right">

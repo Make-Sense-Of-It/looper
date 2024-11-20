@@ -65,14 +65,16 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     // setInterruptedFileIndex(null);
   };
 
-  const handleError = (
+  const handleError = async (
     errorResponse: { message: string; status: number },
     currentIndex: number
   ) => {
-    setError(errorResponse);
-    setInterruptedFileIndex(currentIndex);
-    setIsLoading(false);
-    setIsCancelling(false);
+    await Promise.all([
+      setError(errorResponse),
+      setInterruptedFileIndex(currentIndex),
+      setIsLoading(false),
+      setIsCancelling(false),
+    ]);
   };
 
   const cancelProcessing = useCallback(() => {
@@ -151,7 +153,7 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
 
     for (let i = startIndex; i < files.length; i++) {
       if (cancelRef.current) {
-        console.log("Processing cancelled");
+        // console.log("Processing cancelled");
         break;
       }
 

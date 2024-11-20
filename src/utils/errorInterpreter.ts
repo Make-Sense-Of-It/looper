@@ -39,8 +39,8 @@ export function interpretError(
 
   // Helper function to check if error message includes certain keywords
   const messageIncludes = (keywords: string[]): boolean => {
-    console.log("keywords", keywords)
-    console.log("error.message", error.message)
+    // console.log("keywords", keywords)
+    // console.log("error.message", error.message)
     return keywords.some((keyword) =>
       error.message.toLowerCase().includes(keyword.toLowerCase())
     );

@@ -130,7 +130,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
             ? content
             : stringToArrayBuffer(content)
         );
-        console.log(fileInfo.content);
+        // console.log(fileInfo.content);
         fileInfo.characterCount = fileInfo.content.length;
         break;
       default:
@@ -200,7 +200,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
   };
 
   const handleImageResize = async () => {
-    console.log("new files");
+    // console.log("new files");
     const newFiles = await Promise.all(
       files.map(async (file) => {
         if (file.type === "image") {

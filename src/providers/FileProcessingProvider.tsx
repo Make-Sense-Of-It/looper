@@ -59,11 +59,18 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
 
   const clearError = () => setError(null);
 
-  const handleError = (errorResponse: { message: string; status: number }) => {
-    setError(errorResponse);
-    setIsLoading(false);
-    setIsCancelling(false);
+  const handleError = async (
+    errorResponse: { message: string; status: number },
+    // currentIndex: number
+  ) => {
+    await Promise.all([
+      setError(errorResponse),
+      // setInterruptedFileIndex(currentIndex),
+      setIsLoading(false),
+      setIsCancelling(false),
+    ]);
   };
+
 
   const cancelProcessing = useCallback(() => {
     cancelRef.current = true;

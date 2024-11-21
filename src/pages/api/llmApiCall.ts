@@ -8,13 +8,15 @@ interface LLMApiCallParams {
   prompt: string;
   fileContent: string | { type: string; data: string };
   company: string;
-  fileType: 'text' | 'image';
+  fileType: "text" | "image";
 }
 
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
@@ -22,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { apiKey, model, prompt, fileContent, company, fileType } = req.body;
 
     if (!apiKey || !model || !prompt || !fileContent || !company || !fileType) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const result = await llmApiCall({
@@ -36,19 +38,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ result });
   } catch (error) {
-    console.error('Error in llmApiCall:', error);
+    console.error("Error in llmApiCall:", error);
     if (error instanceof ApiError) {
-      res.status(error.status).json({ error: error.message, details: error.details });
+      res
+        .status(error.status)
+        .json({ error: error.message, details: error.details });
     } else {
-      res.status(500).json({ error: 'Internal Server Error', details: (error as Error).message });
+      res
+        .status(500)
+        .json({
+          error: "Internal Server Error",
+          details: (error as Error).message,
+        });
     }
   }
 }
 
 class ApiError extends Error {
-  constructor(public status: number, public message: string, public details: any) {
+  constructor(
+    public status: number,
+    public message: string,
+    public details: any
+  ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -75,10 +88,10 @@ export async function llmApiCall({
     };
 
     let content: any[];
-    console.log("fileType", fileType)
-    console.log("fileContent in llmApiCall", fileContent)
+    console.log("fileType", fileType);
+    console.log("fileContent in llmApiCall", fileContent);
 
-    if (fileType === 'text') {
+    if (fileType === "text") {
       content = [
         { type: "text", text: `${prompt}\n\nFile content:\n${fileContent}` },
       ];
@@ -108,20 +121,32 @@ export async function llmApiCall({
       Authorization: `Bearer ${apiKey}`,
     };
 
-    if (fileType === 'text') {
-      body = {
-        model: apiModelName,
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: `${prompt}\n\nFile content:\n${fileContent}` },
-        ],
-        max_tokens: 1000,
-      };
+    let content;
+    if (fileType === "text") {
+      content = [
+        { type: "text", text: `${prompt}\n\nFile content:\n${fileContent}` },
+      ];
     } else {
-      // OpenAI doesn't support image input in the same way as Anthropic
-      // You might need to use a different API endpoint or handle this differently
-      throw new Error("Image processing not supported for OpenAI in this implementation");
+      const imageData = fileContent as { type: string; data: string };
+      content = [
+        {
+          type: "text",
+          text: prompt,
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${imageData.type};base64,${imageData.data}`,
+          },
+        },
+      ];
     }
+
+    body = {
+      model: apiModelName,
+      messages: [{ role: "user", content }],
+      max_tokens: 1000,
+    };
   } else {
     throw new Error("Unsupported company");
   }
@@ -140,7 +165,7 @@ export async function llmApiCall({
     console.log(`Response body: ${responseText}`);
 
     if (!response.ok) {
-      let errorMessage = 'An error occurred while processing your request';
+      let errorMessage = "An error occurred while processing your request";
       let errorDetails: any = { responseBody: responseText };
 
       try {
@@ -165,9 +190,9 @@ export async function llmApiCall({
       result = JSON.parse(responseText);
     } catch (parseError) {
       console.error("Error parsing successful response:", parseError);
-      throw new ApiError(500, 'Error parsing API response', {
+      throw new ApiError(500, "Error parsing API response", {
         parseError: (parseError as Error).message,
-        responseBody: responseText
+        responseBody: responseText,
       });
     }
 
@@ -179,9 +204,9 @@ export async function llmApiCall({
     if (error instanceof ApiError) {
       throw error;
     } else {
-      throw new ApiError(500, 'An unexpected error occurred', {
+      throw new ApiError(500, "An unexpected error occurred", {
         error: (error as Error).message,
-        stack: (error as Error).stack
+        stack: (error as Error).stack,
       });
     }
   }

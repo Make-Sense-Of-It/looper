@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ChevronDownIcon, DownloadIcon } from "@radix-ui/react-icons";
 import { DropdownMenu, Flex, Separator, Text, Theme } from "@radix-ui/themes";
 import JSZip from "jszip";
@@ -6,6 +6,7 @@ import { saveAs } from "file-saver";
 import { ConversationGroup, Conversation } from "../../types";
 import LooperBaseButton from "./LooperBaseButton";
 import { formatDate } from "@/src/utils";
+import { useConversation } from "@/src/providers/ConversationProvider";
 
 interface ConversationDownloadMenuProps {
   conversationGroup: ConversationGroup;
@@ -14,7 +15,17 @@ interface ConversationDownloadMenuProps {
 const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
   conversationGroup,
 }) => {
+  const { refreshCurrentGroup } = useConversation();
+
+  // Ensure we have the latest data when the component mounts
+  useEffect(() => {
+    refreshCurrentGroup();
+  }, [refreshCurrentGroup]);
+
   const handleDownloadConversation = async (conversation: Conversation) => {
+    // Ensure we have the latest data before downloading
+    await refreshCurrentGroup();
+
     const zip = new JSZip();
 
     // Add conversation metadata
@@ -38,6 +49,9 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
   };
 
   const handleDownloadAll = async () => {
+    // Ensure we have the latest data before downloading
+    await refreshCurrentGroup();
+
     const groupZip = new JSZip();
 
     // Create a folder for the group

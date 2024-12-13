@@ -56,16 +56,9 @@ export function interpretError(
           "Please ensure the file is not corrupted and try uploading it again.",
       };
     }
-    if (messageIncludes(["processing", "file"])) {
-      return {
-        title: "File Processing Error",
-        message: "There was a problem processing the uploaded file.",
-        suggestion:
-          "Please check if the file format is supported and try again.",
-      };
-    }
   }
 
+  // Handle status code based errors with specific type checking
   // Handle status code based errors with specific type checking
   switch (error.status) {
     case 400:
@@ -85,7 +78,10 @@ export function interpretError(
             "Please contact your organization administrator for access.",
         };
       }
-      if (messageIncludes(["incorrect", "API key"]) || messageIncludes(["invalid", "x-api-key"])) {
+      if (
+        messageIncludes(["incorrect", "API key"]) ||
+        messageIncludes(["invalid", "x-api-key"])
+      ) {
         return {
           title: "Invalid API Key",
           message: "The provided API key is not valid.",
@@ -153,12 +149,22 @@ export function interpretError(
       };
 
     case 503:
-    case 529:
       return {
-        title: "Service Overloaded",
-        message: "The service is temporarily overloaded.",
-        suggestion: "Please retry your request after a brief wait.",
+        title: "OpenAI's engine is currently overloaded",
+        message:
+          "OpenAI reports their servers are overloaded and experiencing high traffic",
+        suggestion:
+          'You can likely hit "Continue looping" in a couple of seconds.',
       };
+    case 529: {
+      return {
+        title: "Anthropic's engine is currently overloaded",
+        message:
+          "Anthropic reports their servers are overloaded and experiencing high traffic",
+        suggestion:
+          'You can likely hit "Continue looping" in a couple of seconds.',
+      };
+    }
   }
 
   // Handle specific error types from the details
@@ -206,7 +212,6 @@ export function interpretError(
   // If no specific interpretation is available, return a generic user-friendly error
   return {
     ...baseError,
-    suggestion:
-      "If this problem persists, please create a GitHub issue.",
+    suggestion: "If this problem persists, please create a GitHub issue.",
   };
 }

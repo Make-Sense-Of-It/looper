@@ -23,7 +23,7 @@ interface FileProcessingContextType {
   isLoading: boolean;
   results: ProcessingResult[];
   processedFiles: number;
-  processFiles: (startIndex?: number) => Promise<void>;
+  processFiles: (startIndex?: number, isNewThread?: boolean) => Promise<void>;
   cancelProcessing: () => void;
   error: ErrorResponse | null;
   clearError: () => void;
@@ -62,7 +62,6 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
 
   const clearError = () => {
     setError(null);
-    // setInterruptedFileIndex(null);
   };
 
   const handleError = async (
@@ -84,32 +83,39 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   }, [processedFiles]);
 
   const createInitialConversationState = async (
-    existingConversation: Conversation | null | undefined
+    existingConversation: Conversation | null | undefined,
+    isNewThread: boolean = false
   ): Promise<Conversation> => {
-    if (existingConversation) {
-      return existingConversation;
+    // If it's a new thread or we don't have an existing conversation,
+    // create a new one
+    if (isNewThread || !existingConversation) {
+      const conversationId = await generateUniqueId();
+      const group =
+        currentGroup ||
+        (await createGroup(
+          `${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`
+        ));
+
+      return {
+        id: conversationId,
+        groupId: group.id,
+        createdAt: new Date(),
+        prompt: prompt,
+        files: [],
+        results: [],
+        company: selectedCompany ?? "",
+        model: selectedModel ?? "",
+      };
     }
 
-    const conversationId = await generateUniqueId();
-    const group =
-      currentGroup ||
-      (await createGroup(
-        `${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`
-      ));
-
-    return {
-      id: conversationId,
-      groupId: group.id,
-      createdAt: new Date(),
-      prompt: prompt,
-      files: [],
-      results: [],
-      company: selectedCompany ?? "",
-      model: selectedModel ?? "",
-    };
+    // Otherwise, return the existing conversation for interrupted processing
+    return existingConversation;
   };
 
-  const processFiles = async (startIndex: number = 0) => {
+  const processFiles = async (
+    startIndex: number = 0,
+    isNewThread: boolean = true
+  ) => {
     cancelRef.current = false;
     let encounteredError = false;
 
@@ -134,7 +140,7 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoading(true);
-    if (startIndex === 0) {
+    if (startIndex === 0 || isNewThread) {
       setResults([]);
       setProcessedFiles(0);
       clearError();
@@ -142,18 +148,18 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     let currentConversation = await createInitialConversationState(
-      currentProcessingConversation
+      currentProcessingConversation,
+      isNewThread
     );
     setCurrentProcessingConversation(currentConversation);
 
-    // Only save if starting fresh
-    if (startIndex === 0) {
+    // Only save if starting fresh or it's a new thread
+    if (startIndex === 0 || isNewThread) {
       await saveConversationData(currentConversation);
     }
 
     for (let i = startIndex; i < files.length; i++) {
       if (cancelRef.current) {
-        // console.log("Processing cancelled");
         break;
       }
 
@@ -234,15 +240,12 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
 
-    // console.log("cancelRef.current", cancelRef.current);
-    // console.log("processedFiles", processedFiles);
-    // console.log("results.length", results.length);
-    // console.log("files.length", files.length);
     if (!cancelRef.current && !encounteredError) {
       setIsLoading(false);
       setIsCancelling(false);
       setPrompt("");
       setFiles([]);
+      setInterruptedFileIndex(null); // Clear interrupted index on successful completion
     } else {
       // Just clear loading states if we were cancelled or had an error
       setIsLoading(false);

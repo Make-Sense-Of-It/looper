@@ -13,7 +13,6 @@ const ProcessButton: React.FC = () => {
     isCancelling,
     processedFiles,
     interruptedFileIndex,
-    // error,
   } = useFileProcessing();
   const { files } = useFileAnalysis();
   // console.log("interruptedFileIndex", interruptedFileIndex);
@@ -23,8 +22,11 @@ const ProcessButton: React.FC = () => {
     if (isLoading) {
       cancelProcessing();
     } else {
+      // If we're continuing from an interrupted state, it's not a new thread
+      const isNewThread = interruptedFileIndex === null;
       processFiles(
-        interruptedFileIndex !== null ? interruptedFileIndex + 1 : 0
+        interruptedFileIndex !== null ? interruptedFileIndex + 1 : 0,
+        isNewThread
       );
     }
   };

@@ -46,14 +46,14 @@ const ConversationMenu = ({ groupId, currentName }: ConversationMenuProps) => {
       const isCmdOrCtrl = event.metaKey || event.ctrlKey;
       const isMac = navigator.platform.includes("Mac");
 
-      console.log('Key pressed:', {
+      console.log("Key pressed:", {
         key: event.key,
         alt: event.altKey,
-        option: event.getModifierState('Alt'),
+        option: event.getModifierState("Alt"),
         meta: event.metaKey,
         ctrl: event.ctrlKey,
         shift: event.shiftKey,
-        platform: navigator.platform
+        platform: navigator.platform,
       });
 
       if (
@@ -129,7 +129,9 @@ const ConversationMenu = ({ groupId, currentName }: ConversationMenuProps) => {
         <DropdownMenu.Content>
           <DropdownMenu.Item
             onClick={handleNewConversation}
-            shortcut={navigator.platform.includes("Mac") ? "⌘ ⌥ N" : "Ctrl Opt N"}
+            shortcut={
+              navigator.platform.includes("Mac") ? "⌘ ⌥ N" : "Ctrl Opt N"
+            }
           >
             <PlusCircledIcon className="mr-2 h-4 w-4" />
             New conversation
@@ -171,6 +173,8 @@ const ConversationMenu = ({ groupId, currentName }: ConversationMenuProps) => {
 
           <Flex direction="column" gap="3">
             <TextField.Root
+              id="conversation-name"
+              name="conversation-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter conversation name"

@@ -58,7 +58,7 @@ export default async function handler(
     const { apiKey, selectedCompany, selectedModel, prompt } =
       await validateFields(fields);
 
-    console.log("files", files);
+    // console.log("files", files);
     const uploadedFile = files.file?.[0];
     if (!uploadedFile) {
       res.write(`data: ${JSON.stringify({ error: "No file uploaded" })}\n\n`);

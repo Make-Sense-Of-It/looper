@@ -15,7 +15,9 @@ const ProcessButton: React.FC = () => {
     interruptedFileIndex,
   } = useFileProcessing();
   const { files } = useFileAnalysis();
-
+  // console.log("interruptedFileIndex", interruptedFileIndex);
+  // console.log("processedFiles", processedFiles)
+  // console.log("files.length", files.length)
   const handleClick = () => {
     if (isLoading) {
       cancelProcessing();

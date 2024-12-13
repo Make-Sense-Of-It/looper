@@ -1,5 +1,5 @@
 import formidable from "formidable";
-import { Company, Model } from "../types";
+import { Company, Conversation, Model } from "../types";
 import { companies } from "./models";
 
 export function getMimeType(filename: string): string {
@@ -101,4 +101,16 @@ export const formatDate = (date: Date) => {
   const minutes = String(d.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day}-${hours}${minutes}`;
+};
+
+export const compareDates = (a: Date, b: Date): number => {
+  return a.getTime() - b.getTime();
+};
+
+export const sortConversations = (
+  conversations: Conversation[]
+): Conversation[] => {
+  return [...conversations].sort((a, b) =>
+    compareDates(new Date(a.createdAt), new Date(b.createdAt))
+  );
 };

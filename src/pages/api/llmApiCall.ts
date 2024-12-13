@@ -88,8 +88,8 @@ export async function llmApiCall({
     };
 
     let content: any[];
-    console.log("fileType", fileType);
-    console.log("fileContent in llmApiCall", fileContent);
+    // console.log("fileType", fileType);
+    // console.log("fileContent in llmApiCall", fileContent);
 
     if (fileType === "text") {
       content = [
@@ -161,8 +161,8 @@ export async function llmApiCall({
     });
 
     const responseText = await response.text();
-    console.log(`Response status: ${response.status} ${response.statusText}`);
-    console.log(`Response body: ${responseText}`);
+    // console.log(`Response status: ${response.status} ${response.statusText}`);
+    // console.log(`Response body: ${responseText}`);
 
     if (!response.ok) {
       let errorMessage = "An error occurred while processing your request";

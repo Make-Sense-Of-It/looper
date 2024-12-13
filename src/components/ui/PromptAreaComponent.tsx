@@ -1,16 +1,12 @@
-import React, { forwardRef } from "react";
 import { Box, Flex } from "@radix-ui/themes";
-import PromptTextArea from "./PromptTextArea";
+import React, { forwardRef } from "react";
 import FileUpload from "./FileUpload";
-import ProcessButton from "./ProcessButton";
+import PromptContent from "./PromptArea";
+import PromptTextArea from "./PromptTextArea";
 import TokenEstimate from "./TokenEstimate";
 
 type PromptAreaContainerProps = {
   children: React.ReactNode;
-};
-
-type PromptContentProps = {
-  children: [React.ReactElement, React.ReactElement];
 };
 
 const PromptAreaContainer = forwardRef<
@@ -26,18 +22,6 @@ const PromptAreaContainer = forwardRef<
   </Box>
 ));
 PromptAreaContainer.displayName = "PromptAreaContainer";
-
-const PromptContent: React.FC<PromptContentProps> = ({ children }) => (
-  <Flex gap="4" className="w-full">
-    <Box className="flex-grow basis-2/3">{children[0]}</Box>
-    <Box className="flex-grow basis-1/3 flex flex-col justify-between">
-      <FileUpload />
-      <Box className="mt-4">
-        <ProcessButton />
-      </Box>
-    </Box>
-  </Flex>
-);
 
 type PromptAreaProps = React.PropsWithChildren;
 

@@ -15,8 +15,19 @@ const PromptTextArea: React.FC = () => {
   };
 
   return (
-    <Flex direction="column" width="full" gap="2" className="flex-grow relative">
-      <Flex align="center" justify="between" gap="1" pr="1" className="absolute z-10 top-1 right-0">
+    <Flex
+      direction="column"
+      width="full"
+      gap="2"
+      className="flex-grow relative"
+    >
+      <Flex
+        align="center"
+        justify="between"
+        gap="1"
+        pr="1"
+        className="absolute z-10 top-1 right-0"
+      >
         {/* <SectionTitle>Your prompt</SectionTitle> */}
         <Dialog.Root>
           <Dialog.Trigger>
@@ -40,7 +51,12 @@ const PromptTextArea: React.FC = () => {
           </Dialog.Content>
         </Dialog.Root>
       </Flex>
+      <label htmlFor="file-processing-prompt" className="sr-only">
+        File Processing Prompt
+      </label>
       <TextArea
+        id="file-processing-prompt"
+        name="file-processing-prompt"
         size="2"
         className="w-full h-24 lg:h-32"
         placeholder="Describe how you want each file to be processed"

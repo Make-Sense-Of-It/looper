@@ -24,7 +24,7 @@ const Header: React.FC = () => {
       <Flex align="center" justify={"between"} gap="3">
         <Box>
           <Link href="/" onClick={handleHomeClick}>
-            <Image src="/looper-logo.png" alt="Logo" width={120} height={40} />
+            <Image src="/looper-logo.png" priority alt="Looper logo" width={120} height={40} style={{ height: 'auto', width: 'auto' }} />
           </Link>
           <Box className="sr-only">
             <Heading as="h1" size="4">

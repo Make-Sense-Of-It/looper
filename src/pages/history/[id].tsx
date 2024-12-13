@@ -1,5 +1,11 @@
-// ConversationIdPage.tsx
-import React, { useEffect, useState, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  memo,
+} from "react";
 import { useRouter } from "next/router";
 import { useConversation } from "../../providers/ConversationProvider";
 import { useFileProcessing } from "@/src/providers/FileProcessingProvider";
@@ -7,10 +13,12 @@ import ConversationLayout from "@/src/components/ui/ConversationLayout";
 import Layout from "../../components/Layout";
 import ResultItem from "@/src/components/ui/ResultItem";
 import UserPromptItem from "@/src/components/ui/UserPromptItem";
+import { Conversation, ProcessingResult } from "@/src/types";
+import { sortConversations } from "@/src/utils";
 
 const ConversationIdPage: React.FC = () => {
+  // console.count("ConversationIdPage render");
   const router = useRouter();
-  const { id } = router.query;
   const { currentGroup, loadGroup } = useConversation();
   const { currentProcessingConversation } = useFileProcessing();
   const [loading, setLoading] = useState(true);
@@ -18,120 +26,130 @@ const ConversationIdPage: React.FC = () => {
   const lastProcessingIdRef = useRef<string | null>(null);
   const initialLoadCompleteRef = useRef(false);
 
-  useEffect(() => {
-    if (id && typeof id === "string") {
-      const loadData = async () => {
+  // Memoize ID with early return if no id
+  const memoizedId = useMemo(() => {
+    return typeof router.query.id === "string" ? router.query.id : null;
+  }, [router.query.id]);
+
+  // Memoize loadGroup callback to prevent unnecessary effect triggers
+  const memoizedLoadGroup = useCallback(
+    async (id: string) => {
+      if (!initialLoadCompleteRef.current) {
         try {
           await loadGroup(id);
           initialLoadCompleteRef.current = true;
-          setLoading(false);
         } catch (error) {
           console.error("Error loading data:", error);
+        } finally {
           setLoading(false);
         }
-      };
-
-      // Reset the initial load flag when id changes
-      if (!initialLoadCompleteRef.current) {
-        loadData();
       }
-    }
-  }, [id, loadGroup]);
+    },
+    [loadGroup]
+  );
 
-  // Ensure data persists after processing
+  // Simplified load data effect
   useEffect(() => {
-    if (
+    if (memoizedId) {
+      memoizedLoadGroup(memoizedId);
+    }
+  }, [memoizedId, memoizedLoadGroup]);
+
+  // Memoize processing check to prevent unnecessary rerenders
+  const shouldReloadGroup = useMemo(() => {
+    return (
       currentProcessingConversation &&
       !currentProcessingConversation.results.length &&
       initialLoadCompleteRef.current
-    ) {
-      // Reload group data when processing completes
-      loadGroup(id as string);
-    }
-  }, [currentProcessingConversation, id, loadGroup]);
-
-  // Combine current conversations with processing conversation
-  const allConversations = React.useMemo(() => {
-    if (!currentGroup) return [];
-
-    const conversations = [...currentGroup.conversations];
-
-    // Only include currentProcessingConversation if we're actively processing
-    if (
-      currentProcessingConversation && // Check if exists
-      currentProcessingConversation.results && // Check if results exists
-      currentProcessingConversation.results.length > 0 && // Check length
-      currentProcessingConversation.groupId && // Check if groupId exists
-      currentGroup.id && // Check if currentGroup.id exists
-      currentProcessingConversation.groupId === currentGroup.id // Compare IDs
-    ) {
-      const existingIndex = conversations.findIndex(
-        (conv) => conv.id === currentProcessingConversation.id
-      );
-      if (existingIndex >= 0) {
-        conversations[existingIndex] = currentProcessingConversation;
-      } else {
-        conversations.push(currentProcessingConversation);
-      }
-    }
-
-    return conversations.sort(
-      (a, b) =>
-        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
-  }, [currentGroup, currentProcessingConversation]);
+  }, [currentProcessingConversation]);
 
-  // Auto-scroll effect
+  // Simplified processing effect
   useEffect(() => {
-    if (currentProcessingConversation) {
-      // Check if this is a new result or an update to the current processing conversation
+    if (shouldReloadGroup && memoizedId) {
+      loadGroup(memoizedId);
+    }
+  }, [shouldReloadGroup, memoizedId, loadGroup]);
+
+  // Memoize conversations array with stable sort function
+  const sortedConversations = useMemo(() => {
+    if (!currentGroup?.conversations) return [];
+    return sortConversations(currentGroup.conversations);
+  }, [currentGroup?.conversations]);
+
+  // Memoize final conversations array
+  const allConversations = useMemo(() => {
+    if (!sortedConversations.length) return [];
+
+    if (
+      !currentProcessingConversation?.results?.length ||
+      !currentProcessingConversation.groupId ||
+      !currentGroup?.id ||
+      currentProcessingConversation.groupId !== currentGroup.id
+    ) {
+      return sortedConversations;
+    }
+
+    const conversations = [...sortedConversations];
+    const existingIndex = conversations.findIndex(
+      (conv) => conv.id === currentProcessingConversation.id
+    );
+
+    if (existingIndex >= 0) {
+      conversations[existingIndex] = currentProcessingConversation;
+    } else {
+      conversations.push(currentProcessingConversation);
+    }
+
+    return sortConversations(conversations);
+  }, [sortedConversations, currentProcessingConversation, currentGroup?.id]);
+
+  // Memoize scroll handler
+  const handleScroll = useCallback(() => {
+    if (currentProcessingConversation && bottomRef.current) {
       const isNewResult =
         lastProcessingIdRef.current !== currentProcessingConversation.id;
       const hasNewResults = currentProcessingConversation.results.length > 0;
 
       if (isNewResult || hasNewResults) {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        bottomRef.current.scrollIntoView({ behavior: "smooth" });
         lastProcessingIdRef.current = currentProcessingConversation.id;
       }
     }
   }, [currentProcessingConversation]);
 
-  // Memoize the content to prevent unnecessary rerenders
-  const conversationContent = React.useMemo(
-    () => (
-      <div className="max-w-2xl mx-auto py-5 relative">
-        <div className="space-y-5">
-          {allConversations.map((conv) => (
-            <div key={conv.id} className="relative rounded-lg p-4">
-              <div className="fixed p-2 top-16 right-14 mt-1.5">
-                {/* <div className="font-medium">Prompt: {conv.prompt}</div> */}
-              </div>
+  // Simplified scroll effect
+  useEffect(() => {
+    handleScroll();
+  }, [handleScroll]);
 
-              <div className="space-y-3">
-                <UserPromptItem
-                  prompt={conv.prompt}
-                  fileCount={conv.files.length}
-                  fileType={conv.files[0]?.type ?? "unknown"}
-                />
-                {conv.results.map((result, idx) => (
-                  <ResultItem
-                    key={`${conv.id}-${idx}`}
-                    id={conv.id}
-                    index={idx}
-                    filename={result.filename}
-                    result={result.result}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-          {/* Invisible element for scrolling */}
-          <div ref={bottomRef} className="h-px" />
-        </div>
+  interface ConversationItemProps {
+    conv: Conversation;
+  }
+
+  // Memoize conversation items to prevent unnecessary rerenders of individual items
+  const ConversationItem = memo(({ conv }: ConversationItemProps) => (
+    <div className="relative rounded-lg p-4">
+      <div className="space-y-3">
+        <UserPromptItem
+          prompt={conv.prompt}
+          fileCount={conv.files.length}
+          fileType={conv.files[0]?.type ?? "unknown"}
+        />
+        {conv.results.map((result: ProcessingResult, idx: number) => (
+          <ResultItem
+            key={`${conv.id}-${idx}`}
+            id={conv.id}
+            index={idx}
+            filename={result.filename}
+            result={result.result}
+          />
+        ))}
       </div>
-    ),
-    [allConversations]
-  );
+    </div>
+  ));
+
+  ConversationItem.displayName = "ConversationItem";
 
   if (loading) {
     return (
@@ -145,9 +163,18 @@ const ConversationIdPage: React.FC = () => {
 
   return (
     <Layout>
-      <ConversationLayout>{conversationContent}</ConversationLayout>
+      <ConversationLayout>
+        <div className="max-w-2xl mx-auto py-5 relative">
+          <div className="space-y-5">
+            {allConversations.map((conv) => (
+              <ConversationItem key={conv.id} conv={conv} />
+            ))}
+            <div ref={bottomRef} className="h-px" />
+          </div>
+        </div>
+      </ConversationLayout>
     </Layout>
   );
 };
 
-export default ConversationIdPage;
+export default React.memo(ConversationIdPage);

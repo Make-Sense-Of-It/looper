@@ -1,4 +1,3 @@
-// FileProcessingProvider.tsx
 import React, {
   createContext,
   useContext,
@@ -24,7 +23,7 @@ interface FileProcessingContextType {
   isLoading: boolean;
   results: ProcessingResult[];
   processedFiles: number;
-  processFiles: () => Promise<void>;
+  processFiles: (startIndex?: number, isNewThread?: boolean) => Promise<void>;
   cancelProcessing: () => void;
   error: ErrorResponse | null;
   clearError: () => void;
@@ -33,6 +32,7 @@ interface FileProcessingContextType {
   clearProcessingState: () => void;
   currentProcessingConversation: Conversation | null;
   isCancelling: boolean;
+  interruptedFileIndex: number | null;
 }
 
 const FileProcessingContext = createContext<
@@ -48,6 +48,9 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const [processedFiles, setProcessedFiles] = useState(0);
   const [error, setError] = useState<ErrorResponse | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [interruptedFileIndex, setInterruptedFileIndex] = useState<
+    number | null
+  >(null);
   const [currentProcessingConversation, setCurrentProcessingConversation] =
     useState<Conversation | null>(null);
 
@@ -57,49 +60,64 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
   const { files, setFiles } = useFileAnalysis();
   const { saveConversationData, currentGroup, createGroup } = useConversation();
 
-  const clearError = () => setError(null);
+  const clearError = () => {
+    setError(null);
+  };
 
   const handleError = async (
     errorResponse: { message: string; status: number },
-    // currentIndex: number
+    currentIndex: number
   ) => {
     await Promise.all([
       setError(errorResponse),
-      // setInterruptedFileIndex(currentIndex),
+      setInterruptedFileIndex(currentIndex),
       setIsLoading(false),
       setIsCancelling(false),
     ]);
   };
 
-
   const cancelProcessing = useCallback(() => {
     cancelRef.current = true;
     setIsCancelling(true);
-  }, []);
+    setInterruptedFileIndex(processedFiles - 1);
+  }, [processedFiles]);
 
-  const createInitialConversationState = async (): Promise<Conversation> => {
-    const conversationId = await generateUniqueId();
-    const group =
-      currentGroup ||
-      (await createGroup(
-        `${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`
-      ));
+  const createInitialConversationState = async (
+    existingConversation: Conversation | null | undefined,
+    isNewThread: boolean = false
+  ): Promise<Conversation> => {
+    // If it's a new thread or we don't have an existing conversation,
+    // create a new one
+    if (isNewThread || !existingConversation) {
+      const conversationId = await generateUniqueId();
+      const group =
+        currentGroup ||
+        (await createGroup(
+          `${prompt.slice(0, 25) + (prompt.length > 25 ? "..." : "")}`
+        ));
 
-    return {
-      id: conversationId,
-      groupId: group.id,
-      createdAt: new Date(),
-      prompt: prompt,
-      files: [],
-      results: [],
-      company: selectedCompany ?? "",
-      model: selectedModel ?? "",
-    };
+      return {
+        id: conversationId,
+        groupId: group.id,
+        createdAt: new Date(),
+        prompt: prompt,
+        files: [],
+        results: [],
+        company: selectedCompany ?? "",
+        model: selectedModel ?? "",
+      };
+    }
+
+    // Otherwise, return the existing conversation for interrupted processing
+    return existingConversation;
   };
 
-  const processFiles = async () => {
+  const processFiles = async (
+    startIndex: number = 0,
+    isNewThread: boolean = true
+  ) => {
     cancelRef.current = false;
-    setCurrentProcessingConversation(null);
+    let encounteredError = false;
 
     if (files.length === 0) {
       setError({
@@ -112,7 +130,7 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
 
     const apiKey = getItem("apiKey");
 
-    if (!prompt || !apiKey) {
+    if ((!prompt && !currentProcessingConversation?.prompt) || !apiKey) {
       setError({
         message: "Please provide both a prompt and an API key.",
         status: 501,
@@ -122,19 +140,30 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     setIsLoading(true);
-    setResults([]);
-    setProcessedFiles(0);
-    clearError();
+    if (startIndex === 0 || isNewThread) {
+      setResults([]);
+      setProcessedFiles(0);
+      clearError();
+      setCurrentProcessingConversation(null);
+    }
 
-    let currentConversation = await createInitialConversationState();
+    let currentConversation = await createInitialConversationState(
+      currentProcessingConversation,
+      isNewThread
+    );
     setCurrentProcessingConversation(currentConversation);
-    await saveConversationData(currentConversation);
 
-    for (const fileInfo of files) {
+    // Only save if starting fresh or it's a new thread
+    if (startIndex === 0 || isNewThread) {
+      await saveConversationData(currentConversation);
+    }
+
+    for (let i = startIndex; i < files.length; i++) {
       if (cancelRef.current) {
-        console.log("Processing cancelled");
         break;
       }
+
+      const fileInfo = files[i];
 
       try {
         const { company, model } = await getCompanyAndModel(
@@ -168,16 +197,19 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
           fileData,
           apiKey,
           model,
-          prompt,
+          currentConversation.prompt || prompt,
           company,
-          handleError
+          (error) => {
+            encounteredError = true;
+            handleError(error, i);
+          }
         );
 
         if (result !== null) {
           const processedResult = {
             filename: fileInfo.name,
             result,
-            prompt: prompt,
+            prompt: currentConversation.prompt || prompt,
           };
 
           setResults((prevResults) => [...prevResults, processedResult]);
@@ -195,20 +227,35 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
           break;
         }
       } catch (error) {
+        encounteredError = true;
         console.error(`Error processing file ${fileInfo.name}:`, error);
-        setError({
-          message: `An unknown error occurred with ${fileInfo.name}`,
-          status: 500,
-          details: error || {},
-        });
+        handleError(
+          {
+            message: `An unknown error occurred with ${fileInfo.name}`,
+            status: 500,
+          },
+          i
+        );
         break;
       }
     }
 
-    setIsLoading(false);
-    setIsCancelling(false);
-    setPrompt("");
-    setFiles([]);
+    if (!cancelRef.current && !encounteredError) {
+      setIsLoading(false);
+      setIsCancelling(false);
+      setPrompt("");
+      setFiles([]);
+      setInterruptedFileIndex(null); // Clear interrupted index on successful completion
+    } else {
+      // Just clear loading states if we were cancelled or had an error
+      setIsLoading(false);
+      setIsCancelling(false);
+    }
+  };
+
+  const setPromptAndClearInterrupted = (newPrompt: string) => {
+    setInterruptedFileIndex(null);
+    setPrompt(newPrompt);
   };
 
   const clearProcessingState = useCallback(() => {
@@ -217,6 +264,7 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
     setIsCancelling(false);
     setPrompt("");
     setFiles([]);
+    setInterruptedFileIndex(null);
     cancelRef.current = false;
   }, [setFiles]);
 
@@ -231,10 +279,11 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
         error,
         clearError,
         prompt,
-        setPrompt,
+        setPrompt: setPromptAndClearInterrupted,
         clearProcessingState,
         currentProcessingConversation,
         isCancelling,
+        interruptedFileIndex,
       }}
     >
       {children}

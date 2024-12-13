@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useMemo,
+  useEffect,
 } from "react";
 import { Conversation, ConversationGroup } from "../types";
 import {
@@ -22,6 +23,7 @@ interface ConversationContextType {
   loadGroup: (id: string) => Promise<void>;
   deleteGroup: (id: string) => Promise<void>;
   createGroup: (name: string) => Promise<ConversationGroup>;
+  refreshCurrentGroup: () => Promise<void>;
 }
 
 const ConversationContext = createContext<ConversationContextType | undefined>(
@@ -37,7 +39,18 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [currentConversation, setCurrentConversation] =
     useState<Conversation | null>(null);
 
-  // Memoize handlers to prevent unnecessary rerenders
+  // Add a function to refresh the current group
+  const refreshCurrentGroup = useCallback(async () => {
+    if (currentGroup?.id) {
+      const updatedGroup = await getConversationGroup(currentGroup.id);
+      if (updatedGroup) {
+        console.log("Refreshing current group data");
+        setCurrentGroup(updatedGroup);
+      }
+    }
+  }, [currentGroup?.id]);
+
+  // Modified saveConversationData to ensure group refresh
   const saveConversationData = useCallback(
     async (conversation: Conversation) => {
       console.log("Saving conversation:", conversation.id);
@@ -45,9 +58,9 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         await saveConversation(conversation);
         setCurrentConversation(conversation);
 
-        // Only update group if it's the current group
-        if (currentGroup && currentGroup.id === conversation.groupId) {
-          const updatedGroup = await getConversationGroup(currentGroup.id);
+        // Always refresh the group after saving a conversation
+        if (conversation.groupId) {
+          const updatedGroup = await getConversationGroup(conversation.groupId);
           if (updatedGroup) {
             console.log("Updating current group after save");
             setCurrentGroup(updatedGroup);
@@ -58,8 +71,15 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
         throw error;
       }
     },
-    [currentGroup]
+    [] // Remove currentGroup dependency
   );
+
+  // Auto-refresh effect when currentConversation changes
+  useEffect(() => {
+    if (currentConversation) {
+      refreshCurrentGroup();
+    }
+  }, [currentConversation, refreshCurrentGroup]);
 
   const loadGroup = useCallback(async (id: string) => {
     console.log("Loading group:", id);
@@ -97,7 +117,6 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
     return createConversationGroup(name);
   }, []);
 
-  // Memoize context value to prevent unnecessary rerenders
   const contextValue = useMemo(
     () => ({
       currentGroup,
@@ -108,6 +127,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
       loadGroup,
       deleteGroup,
       createGroup,
+      refreshCurrentGroup, // Add the refresh function to context
     }),
     [
       currentGroup,
@@ -116,6 +136,7 @@ export const ConversationProvider: React.FC<{ children: React.ReactNode }> = ({
       loadGroup,
       deleteGroup,
       createGroup,
+      refreshCurrentGroup,
     ]
   );
 

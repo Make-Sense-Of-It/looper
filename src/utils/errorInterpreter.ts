@@ -51,7 +51,7 @@ export function interpretError(error: ErrorResponse): UserFriendlyError {
             return {
                 title: 'Too Many Requests',
                 message: 'You have exceeded the allowed number of requests.',
-                suggestion: 'Please wait a moment before trying again. If this persists, you may need to upgrade your plan.',
+                suggestion: 'Please wait a moment before trying again by hitting "Continue looping". If this persists, you may need to upgrade your plan.',
             };
         case 500:
             return {
@@ -65,6 +65,19 @@ export function interpretError(error: ErrorResponse): UserFriendlyError {
                 message: 'Please provide both a prompt and an API key',
                 suggestion: '',
             };
+        case 503:
+            return {
+                title: 'OpenAI\'s engine is currently overloaded',
+                message: 'OpenAI reports their servers are overloaded and experiencing high traffic',
+                suggestion: 'You can likely hit "Continue looping" in a couple of seconds.'
+            }
+        case 529: {
+            return {
+                title: 'Anthropic\'s engine is currently overloaded',
+                message: 'Anthropic reports their servers are overloaded and experiencing high traffic',
+                suggestion: 'You can likely hit "Continue looping" in a couple of seconds.'
+            }
+        }
     }
 
     // Handle specific error types

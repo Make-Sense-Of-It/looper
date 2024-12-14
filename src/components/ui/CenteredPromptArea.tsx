@@ -1,3 +1,4 @@
+// CenteredPromptArea.tsx
 import { Box, Flex } from "@radix-ui/themes";
 import { motion } from "framer-motion";
 import React from "react";
@@ -5,6 +6,7 @@ import FileUpload from "./FileUpload";
 import PromptContent from "./PromptArea";
 import PromptTextArea from "./PromptTextArea";
 import TokenEstimate from "./TokenEstimate";
+import PromptExamples from "./PromptExamples";
 
 const CenteredPromptArea: React.FC = () => {
   return (
@@ -24,6 +26,7 @@ const CenteredPromptArea: React.FC = () => {
               </PromptContent>
             </Flex>
           </Flex>
+          <PromptExamples />
         </Box>
       </motion.div>
     </Box>

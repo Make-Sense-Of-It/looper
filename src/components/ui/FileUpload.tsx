@@ -1,15 +1,18 @@
 // FileUpload.tsx
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadIcon } from "@radix-ui/react-icons";
+import { ArrowRightIcon, UploadIcon } from "@radix-ui/react-icons";
 import { useFileAnalysis } from "../../providers/FileAnalysisProvider";
 import { FileUploadImageProcessing } from "./FileUploadImageProcessing";
+import FileUploadPreview from "./FileUploadPreview";
+import { Button } from "@radix-ui/themes";
 
 const FileUpload = () => {
   const { files, processFile, maxImageDimension, handleImageResize } =
     useFileAnalysis();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -43,17 +46,41 @@ const FileUpload = () => {
       const uploadDate = files[0].uploadDate;
       if (files.length === 1) {
         return (
-          <div>
+          <div className="space-y-1">
             <p>
               File uploaded: {files[0].name} on {uploadDate}
             </p>
+            {files[0].name.endsWith(".zip") && (
+              <Button
+                variant="ghost"
+                className="h-6 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4 px-2 py-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsPreviewDialogOpen(true);
+                }}
+              >
+                View contents
+              </Button>
+            )}
           </div>
         );
       } else {
         return (
-          <div>
-            <p>ZIP file uploaded</p>
-            <p>Contains {files.length} files</p>
+          <div className="space-y-1">
+            <p>ZIP file uploaded ({files.length} files)</p>
+            <Button
+              variant="ghost"
+              className="h-6 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4 px-2 py-0 group"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsPreviewDialogOpen(true);
+              }}
+            >
+              <span className="text-xs flex items-center gap-1">
+                View contents
+                <ArrowRightIcon className="opacity-0 -translate-x-2 transition-all duration-200 ease-in-out group-hover:opacity-100 group-hover:translate-x-0" />
+              </span>
+            </Button>
           </div>
         );
       }
@@ -68,7 +95,7 @@ const FileUpload = () => {
 
   const handleImageAreaClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent dropzone activation
-    setIsDialogOpen(true);
+    setIsImageDialogOpen(true);
   };
 
   return (
@@ -97,15 +124,24 @@ const FileUpload = () => {
             className="absolute flex justify-between bottom-0 left-0 right-0 bg-bronze-11 text-white text-xs py-1 px-2 rounded-b-lg cursor-pointer hover:bg-bronze-10"
           >
             <p>Images detected</p>
-            <p>{maxImageDimension > 800 ? "Reprocess?" : `${maxImageDimension}px`}</p>
+            <p>
+              {maxImageDimension > 800
+                ? "Reprocess?"
+                : `${maxImageDimension}px`}
+            </p>
           </div>
         )}
       </div>
       <FileUploadImageProcessing
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        isOpen={isImageDialogOpen}
+        onClose={() => setIsImageDialogOpen(false)}
         maxDimension={maxImageDimension}
         onConfirm={handleImageResize}
+      />
+      <FileUploadPreview
+        isOpen={isPreviewDialogOpen}
+        onClose={() => setIsPreviewDialogOpen(false)}
+        files={files}
       />
     </div>
   );

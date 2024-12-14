@@ -15,6 +15,7 @@ import ResultItem from "@/src/components/ui/ResultItem";
 import UserPromptItem from "@/src/components/ui/UserPromptItem";
 import { Conversation, ProcessingResult } from "@/src/types";
 import { sortConversations } from "@/src/utils";
+import ReferenceConversationButton from "@/src/components/ui/ReferenceConversationButton";
 
 const ConversationIdPage: React.FC = () => {
   // console.count("ConversationIdPage render");
@@ -145,6 +146,7 @@ const ConversationIdPage: React.FC = () => {
             result={result.result}
           />
         ))}
+        <ReferenceConversationButton conversation={conv} />
       </div>
     </div>
   ));

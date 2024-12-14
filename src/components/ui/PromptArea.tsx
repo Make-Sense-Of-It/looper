@@ -1,3 +1,4 @@
+// PromptArea.tsx
 import { Flex, Box } from "@radix-ui/themes";
 import FileUpload from "./FileUpload";
 import ProcessButton from "./ProcessButton";

@@ -34,7 +34,7 @@ const ConversationMenu = ({ groupId, currentName }: ConversationMenuProps) => {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const handleNewConversation = useCallback(() => {
-    console.log("handleNew");
+    // console.log("handleNew");
     clearProcessingState();
     setCurrentGroup(null);
     router.push("/");
@@ -46,22 +46,22 @@ const ConversationMenu = ({ groupId, currentName }: ConversationMenuProps) => {
       const isCmdOrCtrl = event.metaKey || event.ctrlKey;
       const isMac = navigator.platform.includes("Mac");
 
-      console.log("Key pressed:", {
-        key: event.key,
-        alt: event.altKey,
-        option: event.getModifierState("Alt"),
-        meta: event.metaKey,
-        ctrl: event.ctrlKey,
-        shift: event.shiftKey,
-        platform: navigator.platform,
-      });
+      // console.log("Key pressed:", {
+      //   key: event.key,
+      //   alt: event.altKey,
+      //   option: event.getModifierState("Alt"),
+      //   meta: event.metaKey,
+      //   ctrl: event.ctrlKey,
+      //   shift: event.shiftKey,
+      //   platform: navigator.platform,
+      // });
 
       if (
         (isMac ? event.getModifierState("Alt") : event.altKey) &&
         event.key.toLowerCase() === "ˆ"
       ) {
         event.preventDefault();
-        console.log("New conversation shortcut triggered");
+        // console.log("New conversation shortcut triggered");
         handleNewConversation();
         return;
       }

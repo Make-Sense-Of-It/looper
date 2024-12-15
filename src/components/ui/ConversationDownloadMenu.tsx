@@ -12,20 +12,27 @@ interface ConversationDownloadMenuProps {
   conversationGroup: ConversationGroup;
 }
 
+type CombineFormat = "newline" | "separator";
+
+const combineResults = (
+  results: Array<{ result: string }>,
+  format: CombineFormat
+) => {
+  const separator = format === "newline" ? "\n" : "\n---\n";
+  return results.map((result) => result.result).join(separator);
+};
+
 const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
   conversationGroup,
 }) => {
   const { refreshCurrentGroup } = useConversation();
 
-  // Ensure we have the latest data when the component mounts
   useEffect(() => {
     refreshCurrentGroup();
   }, [refreshCurrentGroup]);
 
   const handleDownloadConversation = async (conversation: Conversation) => {
-    // Ensure we have the latest data before downloading
     await refreshCurrentGroup();
-
     const zip = new JSZip();
 
     // Add conversation metadata
@@ -48,13 +55,29 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
     saveAs(content, `${formattedDate} ${conversation.prompt.slice(0, 12)}...`);
   };
 
-  const handleDownloadAll = async () => {
-    // Ensure we have the latest data before downloading
+  const handleDownloadConversationAsSingleFile = async (
+    conversation: Conversation,
+    format: CombineFormat
+  ) => {
     await refreshCurrentGroup();
 
-    const groupZip = new JSZip();
+    const combinedContent = combineResults(conversation.results, format);
+    const formatSuffix = format === "newline" ? "newline" : "separator";
 
-    // Create a folder for the group
+    // Save as a single file
+    const blob = new Blob([combinedContent], {
+      type: "text/plain;charset=utf-8",
+    });
+    const formattedDate = formatDate(conversationGroup.createdAt);
+    saveAs(
+      blob,
+      `${formattedDate} ${conversation.prompt.slice(0, 12)}_${formatSuffix}.txt`
+    );
+  };
+
+  const handleDownloadAll = async () => {
+    await refreshCurrentGroup();
+    const groupZip = new JSZip();
     const groupFolder = groupZip.folder(conversationGroup.name);
 
     if (groupFolder) {
@@ -75,6 +98,7 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
         const convFolder = groupFolder.folder(
           `${formattedDate} ${conversation.prompt.slice(0, 12)}...`
         );
+
         if (convFolder) {
           // Add conversation metadata
           const metadata = {
@@ -94,6 +118,34 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
             convFolder.file(`${baseFilename}_result.txt`, result.result);
           });
         }
+      }
+    }
+
+    const content = await groupZip.generateAsync({ type: "blob" });
+    saveAs(content, `${conversationGroup.name}_group.zip`);
+  };
+
+  const handleDownloadAllConversationsAsSingleFiles = async (
+    format: CombineFormat
+  ) => {
+    await refreshCurrentGroup();
+    const groupZip = new JSZip();
+    const groupFolder = groupZip.folder(conversationGroup.name);
+
+    if (groupFolder) {
+      // For each conversation, create a single combined file
+      for (const conversation of conversationGroup.conversations) {
+        const formattedDate = formatDate(conversation.createdAt);
+        const combinedContent = combineResults(conversation.results, format);
+        const formatSuffix = format === "newline" ? "newline" : "separator";
+
+        groupFolder.file(
+          `${formattedDate} ${conversation.prompt.slice(
+            0,
+            12
+          )}_${formatSuffix}.txt`,
+          combinedContent
+        );
       }
     }
 
@@ -127,25 +179,74 @@ const ConversationDownloadMenu: React.FC<ConversationDownloadMenuProps> = ({
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Content>
-        <DropdownMenu.Item onClick={handleDownloadAll}>
-          Download all conversations
-        </DropdownMenu.Item>
+        <DropdownMenu.Sub>
+          <DropdownMenu.SubTrigger>
+            Download all conversations
+          </DropdownMenu.SubTrigger>
+          <DropdownMenu.SubContent>
+            <DropdownMenu.Item onClick={handleDownloadAll}>
+              As separate files
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onClick={() =>
+                handleDownloadAllConversationsAsSingleFiles("newline")
+              }
+            >
+              As single file (newline)
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onClick={() =>
+                handleDownloadAllConversationsAsSingleFiles("separator")
+              }
+            >
+              As single file (separator)
+            </DropdownMenu.Item>
+          </DropdownMenu.SubContent>
+        </DropdownMenu.Sub>
 
         <DropdownMenu.Separator />
 
         {sortedConversations.map((conversation, index) => (
-          <DropdownMenu.Item
-            key={conversation.id}
-            onClick={() => handleDownloadConversation(conversation)}
-          >
-            <Flex gap="1" className="-ml-2">
-              <Text className="font-semibold text-bronze-9">{index + 1}. </Text>
-              <Text>
-                {conversation.prompt.slice(0, 24) +
-                  (conversation.prompt.length > 24 ? "..." : "")}
-              </Text>
-            </Flex>
-          </DropdownMenu.Item>
+          <DropdownMenu.Sub key={conversation.id}>
+            <DropdownMenu.SubTrigger className="group">
+              <Flex gap="1" className="-ml-2">
+                <Text className="font-semibold text-bronze-9 group-hover:text-bronze-5">
+                  {index + 1}.{" "}
+                </Text>
+                <Text>
+                  {conversation.prompt.slice(0, 24) +
+                    (conversation.prompt.length > 24 ? "..." : "")}
+                </Text>
+              </Flex>
+            </DropdownMenu.SubTrigger>
+            <DropdownMenu.SubContent>
+              <DropdownMenu.Item
+                onClick={() => handleDownloadConversation(conversation)}
+              >
+                As separate files
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onClick={() =>
+                  handleDownloadConversationAsSingleFile(
+                    conversation,
+                    "newline"
+                  )
+                }
+              >
+                As single file (\n)
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onClick={() =>
+                  handleDownloadConversationAsSingleFile(
+                    conversation,
+                    "separator"
+                  )
+                }
+              >
+                As single file (---)
+              </DropdownMenu.Item>
+            </DropdownMenu.SubContent>
+          </DropdownMenu.Sub>
         ))}
       </DropdownMenu.Content>
     </DropdownMenu.Root>

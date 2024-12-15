@@ -167,7 +167,7 @@ const ConversationIdPage: React.FC = () => {
     <Layout>
       <ConversationLayout>
         <div className="max-w-2xl mx-auto py-5 relative">
-          <div className="space-y-5">
+          <div className="space-y-0">
             {allConversations.map((conv) => (
               <ConversationItem key={conv.id} conv={conv} />
             ))}

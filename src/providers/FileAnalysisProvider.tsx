@@ -17,6 +17,8 @@ interface FileAnalysisContextType {
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   maxImageDimension: number;
   handleImageResize: () => Promise<void>;
+  csvHeader: string | null;
+  setCsvHeader: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const FileAnalysisContext = createContext<FileAnalysisContextType | undefined>(
@@ -39,6 +41,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [maxImageDimension, setMaxImageDimension] = useState(0);
+  const [csvHeader, setCsvHeader] = useState<string | null>(null);
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
@@ -51,12 +54,24 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
           if (file.name.endsWith(".zip")) {
             newFiles = await processZipFile(content);
           } else {
-            const fileInfo = await processSingleFile(file.name, content);
-            if (fileInfo) newFiles.push(fileInfo);
+            const fileInfo = await processSingleFile(file.name, content, false);
+            if (fileInfo) {
+              if (Array.isArray(fileInfo)) {
+                newFiles = fileInfo;
+              } else {
+                newFiles.push(fileInfo);
+              }
+            }
           }
         } else if (typeof content === "string") {
-          const fileInfo = await processSingleFile(file.name, content);
-          if (fileInfo) newFiles.push(fileInfo);
+          const fileInfo = await processSingleFile(file.name, content, false);
+          if (fileInfo) {
+            if (Array.isArray(fileInfo)) {
+              newFiles = fileInfo;
+            } else {
+              newFiles.push(fileInfo);
+            }
+          }
         } else {
           throw new Error("Invalid file content");
         }
@@ -91,8 +106,15 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     for (const [filename, zipEntry] of Object.entries(zipContents.files)) {
       if (!zipEntry.dir && !isHiddenOrSystemFile(filename)) {
         const fileContent = await zipEntry.async("arraybuffer");
-        const fileInfo = await processSingleFile(filename, fileContent);
-        if (fileInfo) processedFiles.push(fileInfo);
+        // Note: isInZip is true for files within a ZIP
+        const fileInfo = await processSingleFile(filename, fileContent, true);
+        if (fileInfo) {
+          if (Array.isArray(fileInfo)) {
+            processedFiles.push(...fileInfo);
+          } else {
+            processedFiles.push(fileInfo);
+          }
+        }
       }
     }
 
@@ -101,16 +123,56 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
 
   const processSingleFile = async (
     filename: string,
-    content: ArrayBuffer | string
-  ): Promise<FileInfo | null> => {
+    content: ArrayBuffer | string,
+    isInZip: boolean
+  ): Promise<FileInfo | FileInfo[] | null> => {
     if (isHiddenOrSystemFile(filename)) return null;
 
+    const fileType = getFileType(filename);
+    const isCSV = filename.toLowerCase().endsWith(".csv");
+    const isTxt = filename.toLowerCase().endsWith(".txt");
+
+    // Handle CSV and text files that aren't in a ZIP
+    if ((isCSV || isTxt) && !isInZip) {
+      const textContent =
+        content instanceof ArrayBuffer
+          ? new TextDecoder().decode(content)
+          : content;
+
+      const rows = textContent
+        .split("\n")
+        .map((row) => row.trim())
+        .filter((row) => row.length > 0);
+
+      if (rows.length === 0) return null;
+
+      // For CSV files, store header row and remove it from processing
+      if (isCSV) {
+        const headerRow = rows[0];
+        setCsvHeader(headerRow);
+        rows.shift(); // Remove header row from processing
+      }
+
+      // Process up to 500 rows
+      const processRows = rows.slice(0, 500);
+
+      return processRows.map((row, index) => ({
+        name: `${filename.replace(/\.(csv|txt)$/, "")}_row_${index + 1}`,
+        uploadDate: new Date().toLocaleString(),
+        size: row.length,
+        type: "text" as const,
+        content: row,
+        characterCount: row.length,
+      }));
+    }
+
+    // Handle all other files (including CSVs/text files in ZIPs) as before
     const fileInfo: FileInfo = {
       name: filename,
       uploadDate: new Date().toLocaleString(),
       size:
         content instanceof ArrayBuffer ? content.byteLength : content.length,
-      type: getFileType(filename),
+      type: fileType,
       content: "",
     };
 
@@ -130,7 +192,6 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
             ? content
             : stringToArrayBuffer(content)
         );
-        // console.log(fileInfo.content);
         fileInfo.characterCount = fileInfo.content.length;
         break;
       default:
@@ -238,6 +299,8 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
         setError,
         maxImageDimension,
         handleImageResize,
+        csvHeader,
+        setCsvHeader,
       }}
     >
       {children}

@@ -1,7 +1,8 @@
 import { useFileAnalysis } from "@/src/providers/FileAnalysisProvider";
+import { useFileProcessing } from "@/src/providers/FileProcessingProvider";
 import { Conversation, FileInfo } from "@/src/types";
 import { TrackNextIcon, TrackPreviousIcon } from "@radix-ui/react-icons";
-import { Button, Separator } from "@radix-ui/themes";
+import { Button, Flex, Separator } from "@radix-ui/themes";
 
 interface ReferenceConversationButtonProps {
   conversation: Conversation;
@@ -11,6 +12,7 @@ const ReferenceConversationButton = ({
   conversation,
 }: ReferenceConversationButtonProps) => {
   const { setFiles } = useFileAnalysis();
+  const { isLoading } = useFileProcessing();
 
   const handleReuseOriginalFiles = () => {
     const filesWithUpdatedTimestamp = conversation.files.map((file) => ({
@@ -22,12 +24,11 @@ const ReferenceConversationButton = ({
   };
 
   const handleUseProcessedFiles = () => {
-    // Convert ProcessingResults to FileInfo objects
     const processedFiles: FileInfo[] = conversation.results.map((result) => ({
       name: result.filename,
       uploadDate: new Date().toLocaleString(),
       size: result.result.length,
-      type: "text", // Assuming results are always text
+      type: "text",
       content: result.result,
       characterCount: result.result.length,
     }));
@@ -35,31 +36,22 @@ const ReferenceConversationButton = ({
     setFiles(processedFiles);
   };
 
-  // Only show if processing is complete (has results)
-  if (!conversation.results.length) {
-    return null;
+  if (isLoading) {
+    return <div className="h-8 block" />;
   }
 
   return (
-    <div className="flex gap-2 justify-end ">
-      <Button
-        variant="ghost"
-        onClick={handleReuseOriginalFiles}
-        className="flex items-center gap-2 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4"
-      >
-        <TrackPreviousIcon />
-        <span>Use original files</span>
+    <Flex justify="end" gap="2" mt="2">
+      <Button variant="ghost" color="gray" onClick={handleReuseOriginalFiles}>
+        <TrackPreviousIcon width="16" height="16" />
+        Use original files
       </Button>
-      <Separator orientation={"vertical"} size={"1"} />
-      <Button
-        variant="ghost"
-        onClick={handleUseProcessedFiles}
-        className="flex items-center gap-2 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4"
-      >
-        <span>Use processed results</span>
-        <TrackNextIcon />
+      <Separator orientation="vertical" size="1" />
+      <Button variant="ghost" color="gray" onClick={handleUseProcessedFiles}>
+        Use processed results
+        <TrackNextIcon width="16" height="16" />
       </Button>
-    </div>
+    </Flex>
   );
 };
 

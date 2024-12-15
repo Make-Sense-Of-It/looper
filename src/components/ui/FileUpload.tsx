@@ -1,4 +1,3 @@
-// FileUpload.tsx
 import React, { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { ArrowRightIcon, UploadIcon } from "@radix-ui/react-icons";
@@ -13,10 +12,12 @@ const FileUpload = () => {
 
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [originalFileName, setOriginalFileName] = useState<string>("");
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
+        setOriginalFileName(acceptedFiles[0].name);
         processFile(acceptedFiles[0]);
       }
     },
@@ -30,6 +31,7 @@ const FileUpload = () => {
         "application/zip": [".zip"],
         "application/pdf": [".pdf"],
         "text/plain": [".txt"],
+        "text/csv": [".csv"],
       },
       maxFiles: 1,
     });
@@ -38,19 +40,26 @@ const FileUpload = () => {
     if (fileRejections.length > 0) {
       return (
         <span className="text-red-500">
-          Please upload only ZIP, PDF, or TXT files.
+          Please upload only ZIP, PDF, CSV or TXT files.
         </span>
       );
     }
     if (files.length > 0) {
       const uploadDate = files[0].uploadDate;
+
+      // Check if this is a split file (CSV or TXT)
+      const isSplitFile =
+        (originalFileName.endsWith(".csv") ||
+          originalFileName.endsWith(".txt")) &&
+        !originalFileName.endsWith(".zip");
+
       if (files.length === 1) {
         return (
           <div className="space-y-1">
             <p>
-              File uploaded: {files[0].name} on {uploadDate}
+              File uploaded: {originalFileName} on {uploadDate}
             </p>
-            {files[0].name.endsWith(".zip") && (
+            {(files[0].name.endsWith(".zip") || isSplitFile) && (
               <Button
                 variant="ghost"
                 className="h-6 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4 px-2 py-0"
@@ -65,9 +74,20 @@ const FileUpload = () => {
           </div>
         );
       } else {
+        const fileType = originalFileName.endsWith(".csv")
+          ? "CSV"
+          : originalFileName.endsWith(".txt")
+          ? "text"
+          : "ZIP";
+
+        const message =
+          fileType === "ZIP"
+            ? `ZIP file uploaded (${files.length} files)`
+            : `${fileType} file split into ${files.length} files`;
+
         return (
           <div className="space-y-1">
-            <p>ZIP file uploaded ({files.length} files)</p>
+            <p>{message}</p>
             <Button
               variant="ghost"
               className="h-6 text-bronze-11 hover:text-bronze-12 hover:bg-bronze-4 px-2 py-0 group"
@@ -88,13 +108,13 @@ const FileUpload = () => {
     if (isDragActive) {
       return "Drop the file here";
     }
-    return "Drag & drop a ZIP, PDF, or TXT file here, or click to select";
+    return "Drag & drop a ZIP, PDF, CSV or TXT file here, or click to select";
   };
 
   const hasImages = files.some((file) => file.type === "image");
 
   const handleImageAreaClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent dropzone activation
+    e.stopPropagation();
     setIsImageDialogOpen(true);
   };
 

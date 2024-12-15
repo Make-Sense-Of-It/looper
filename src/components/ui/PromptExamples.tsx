@@ -24,9 +24,9 @@ const EXAMPLE_CONFIGS: ExampleConfig[] = [
     title: "CSV analysis 📋",
     description: "Loop over research results",
     prompt:
-      "Analyze this CSV file and provide: 1) Summary statistics for numerical columns 2) Identify any trends 3) Flag any anomalies in the data",
-    fileUrl: "/examples/csv-example.zip",
-    filename: "csv-example.zip",
+      "Below is a CSV row that's based on the following headers participant_id,gender,age_range,income,education,reported_ease,observed_ease,completion_time_seconds,water_weight_grams. Your task is to generate a brief, insightful observation for each participant who used an electric handdryer that captures meaningful patterns and potential usability implications. Consider reported vs observed ease, completion time vs ease ratings, water rate vs completion, water weight vs ease. So, given following input: '14,m,18-24,<30k,Bachelor's Degree,5,3,17.5,0.28' a good output might be, 'Quick completion with overconfident self-assessment - rapid usage but lower observed ease suggests possible rushed behavior. May indicate need for clearer guidance on optimal usage time.' Output a single concise sentence.",
+    fileUrl: "/examples/handdryer.csv",
+    filename: "handdryer.csv",
   },
   {
     title: "Image recognition 📸",

@@ -1,8 +1,9 @@
 import { FileInfo } from "@/src/types";
 import {
-    ChevronRightIcon,
-    Cross2Icon,
-    FileIcon
+  ChevronRightIcon,
+  Cross2Icon,
+  FileIcon,
+  TrashIcon,
 } from "@radix-ui/react-icons";
 import { Button, Dialog, Flex, ScrollArea, Text } from "@radix-ui/themes";
 import Image from "next/image";
@@ -22,11 +23,19 @@ const FileUploadPreview = ({
 }: FileUploadPreviewProps) => {
   const { setFiles } = useFileAnalysis();
   const [selectedFile, setSelectedFile] = useState<FileInfo | null>(null);
+  const [deletingFileIndex, setDeletingFileIndex] = useState<number | null>(
+    null
+  );
   const hasImages = files.some((file) => file.type === "image");
 
   const handleRemoveZip = () => {
     setFiles([]);
     onClose();
+  };
+
+  const handleDeleteFile = (index: number) => {
+    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
+    setDeletingFileIndex(null);
   };
 
   const FileContent = ({ file }: { file: FileInfo }) => (
@@ -97,11 +106,15 @@ const FileUploadPreview = ({
                 align="center"
                 gap="3"
                 p="2"
-                className="rounded-md hover:bg-bronze-2 group cursor-pointer"
-                onClick={() => setSelectedFile(file)}
+                className="rounded-md hover:bg-bronze-2 group"
               >
                 <FileIcon className="h-4 w-4 text-bronze-11" />
-                <Flex direction="column" style={{ minWidth: 0 }}>
+                <Flex
+                  direction="column"
+                  style={{ minWidth: 0 }}
+                  className="cursor-pointer flex-1"
+                  onClick={() => setSelectedFile(file)}
+                >
                   <Text size="2" weight="medium" className="truncate">
                     {file.name}
                   </Text>
@@ -109,7 +122,35 @@ const FileUploadPreview = ({
                     {(file.size / 1024).toFixed(1)} KB
                   </Text>
                 </Flex>
-                <ChevronRightIcon className="h-4 w-4 text-bronze-11 opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0" />
+                <Flex
+                  gap="2"
+                  className="opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0"
+                >
+                  {deletingFileIndex === index ? (
+                    <Button
+                      size="1"
+                      color="red"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(index);
+                      }}
+                    >
+                      Confirm
+                    </Button>
+                  ) : (
+                    <Button
+                      size="1"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingFileIndex(index);
+                      }}
+                    >
+                      <TrashIcon className="h-4 w-4 text-bronze-11" />
+                    </Button>
+                  )}
+                  {/* <ChevronRightIcon className="h-4 w-4 text-bronze-11" /> */}
+                </Flex>
               </Flex>
             ))
           )}

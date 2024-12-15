@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+::selection {
+  background-color: #FFD700!important; /* Gold color to match your theme */
+  color: black; /* Text color when highlighted */
+}
+
 :root,
 .light,
 .light-theme {

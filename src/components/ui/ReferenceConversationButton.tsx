@@ -11,7 +11,7 @@ interface ReferenceConversationButtonProps {
 const ReferenceConversationButton = ({
   conversation,
 }: ReferenceConversationButtonProps) => {
-  const { setFiles } = useFileAnalysis();
+  const { setFiles, setFileCount } = useFileAnalysis();
   const { isLoading } = useFileProcessing();
 
   const handleReuseOriginalFiles = () => {
@@ -21,11 +21,13 @@ const ReferenceConversationButton = ({
     }));
 
     setFiles(filesWithUpdatedTimestamp);
+    setFileCount(filesWithUpdatedTimestamp.length);
   };
 
   const handleUseProcessedFiles = () => {
     const processedFiles: FileInfo[] = conversation.results.map((result) => ({
-      name: result.filename,
+      //   name: result.filename,
+      name: result.filename.replace(/\.(jpg|jpeg|png|gif|bmp|webp)$/i, ".txt"),
       uploadDate: new Date().toLocaleString(),
       size: result.result.length,
       type: "text",
@@ -34,6 +36,7 @@ const ReferenceConversationButton = ({
     }));
 
     setFiles(processedFiles);
+    setFileCount(processedFiles.length);
   };
 
   if (isLoading) {

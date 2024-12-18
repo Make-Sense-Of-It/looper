@@ -18,6 +18,7 @@ import {
 import { processFile } from "../utils/processFile";
 import { useConversation } from "./ConversationProvider";
 import { generateUniqueId } from "../utils/indexdb";
+import { checkForOversizedImages } from "../utils/imageValidation";
 
 interface FileProcessingContextType {
   isLoading: boolean;
@@ -128,6 +129,11 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
       return;
     }
 
+    const imageSizeError = checkForOversizedImages(files);
+    if (imageSizeError) {
+      setError(imageSizeError);
+      return;
+    }
     const apiKey = getItem("apiKey");
 
     if ((!prompt && !currentProcessingConversation?.prompt) || !apiKey) {

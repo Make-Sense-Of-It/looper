@@ -59,7 +59,6 @@ export function interpretError(
   }
 
   // Handle status code based errors with specific type checking
-  // Handle status code based errors with specific type checking
   switch (error.status) {
     case 400:
       return {
@@ -119,8 +118,16 @@ export function interpretError(
       };
 
     case 413:
+      if (messageIncludes(["images", "px"])) {
+        return {
+          title: "Image(s) too large",
+          message: error.message,
+          suggestion:
+            "Click the 'Resize Images' button to automatically resize your images to an acceptable size.",
+        };
+      }
       return {
-        title: "Request Too Large",
+        title: "Request too large",
         message: "The request exceeds the maximum allowed size.",
         suggestion: "Please reduce the size of your request and try again.",
       };
@@ -128,7 +135,7 @@ export function interpretError(
     case 429:
       if (messageIncludes(["quota", "credits", "billing"])) {
         return {
-          title: "Quota Exceeded",
+          title: "Quota exceeded",
           message: "You have exceeded your current quota or spending limit.",
           suggestion: "Please check your billing details or upgrade your plan.",
         };
@@ -143,9 +150,9 @@ export function interpretError(
     case 500:
       return {
         title: "Server Error",
-        message: "An unexpected error occurred on our servers.",
+        message: "Oops. An unexpected error occurred on the servers.",
         suggestion:
-          "Please try again later. If the problem persists, contact support.",
+          "Please try again later. You can likely hit 'Continue looping' in a couple of seconds.",
       };
 
     case 503:

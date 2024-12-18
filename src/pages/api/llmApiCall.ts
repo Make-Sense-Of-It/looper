@@ -1,3 +1,4 @@
+// @/pages/api/llmApiCall.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { convertToApiModelNameUsingCompanyString } from "@/src/utils/modelUtils";
 import { NextApiRequest, NextApiResponse } from "next";
@@ -20,7 +21,6 @@ export default async function handler(
   }
 
   try {
-    // console.log(req.body);
     const { apiKey, model, prompt, fileContent, company, fileType } = req.body;
 
     if (!apiKey || !model || !prompt || !fileContent || !company || !fileType) {
@@ -44,12 +44,10 @@ export default async function handler(
         .status(error.status)
         .json({ error: error.message, details: error.details });
     } else {
-      res
-        .status(500)
-        .json({
-          error: "Internal Server Error",
-          details: (error as Error).message,
-        });
+      res.status(500).json({
+        error: "Internal Server Error",
+        details: (error as Error).message,
+      });
     }
   }
 }
@@ -73,11 +71,14 @@ export async function llmApiCall({
   company,
   fileType,
 }: LLMApiCallParams): Promise<string> {
+  const startTime = Date.now();
   let apiUrl: string;
   let headers: Record<string, string>;
   let body: Record<string, any>;
 
   const apiModelName = convertToApiModelNameUsingCompanyString(model, company);
+
+  // console.log(`LLM API request started - Model: ${company}/${model}`);
 
   if (company === "Anthropic") {
     apiUrl = "https://api.anthropic.com/v1/messages";
@@ -88,8 +89,6 @@ export async function llmApiCall({
     };
 
     let content: any[];
-    // console.log("fileType", fileType);
-    // console.log("fileContent in llmApiCall", fileContent);
 
     if (fileType === "text") {
       content = [
@@ -152,17 +151,18 @@ export async function llmApiCall({
   }
 
   try {
-    // console.log(`Response body: ${body}`);
-
     const response = await fetch(apiUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
     });
 
+    const duration = Date.now() - startTime;
+    console.log(
+      `LLM API request completed - Status: ${response.status}, Duration: ${duration}ms, Model: ${company}/${model}`
+    );
+
     const responseText = await response.text();
-    // console.log(`Response status: ${response.status} ${response.statusText}`);
-    // console.log(`Response body: ${responseText}`);
 
     if (!response.ok) {
       let errorMessage = "An error occurred while processing your request";
@@ -200,7 +200,16 @@ export async function llmApiCall({
       ? result.content[0].text
       : result.choices[0].message.content;
   } catch (error) {
-    console.error("Error in llmApiCall:", error);
+    const duration = Date.now() - startTime;
+
+    console.error(
+      `LLM API request failed - Duration: ${duration}ms, Model: ${company}/${model}, ` +
+        `Status: ${error instanceof ApiError ? error.status : 500}, ` +
+        `Error: ${
+          error instanceof ApiError ? error.message : "Internal server error"
+        }`
+    );
+
     if (error instanceof ApiError) {
       throw error;
     } else {

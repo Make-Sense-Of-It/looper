@@ -29,7 +29,7 @@ const ErrorComponent: React.FC = () => {
 
   // Determine if this error type is retryable
   const isRetryableError =
-    error.status === 429 || error.status === 503 || error.status === 529;
+    error.status === 429 || error.status === 503 || error.status === 529 || error.status === 500;
 
   const handleClose = () => {
     if (processingError) {

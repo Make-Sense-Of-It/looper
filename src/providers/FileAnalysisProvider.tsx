@@ -12,6 +12,8 @@ import { getMaxImageDimension, resizeImage } from "../utils/imageProcessing";
 interface FileAnalysisContextType {
   files: FileInfo[];
   setFiles: React.Dispatch<React.SetStateAction<FileInfo[]>>;
+  fileCount: number; 
+  setFileCount: React.Dispatch<React.SetStateAction<number | 0>>;
   processFile: (file: File) => Promise<void>;
   error: string | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -42,6 +44,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const [maxImageDimension, setMaxImageDimension] = useState(0);
   const [csvHeader, setCsvHeader] = useState<string | null>(null);
+  const [fileCount, setFileCount] = useState(0);
 
   const processFile = async (file: File) => {
     const reader = new FileReader();
@@ -82,6 +85,8 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         setFiles(newFiles);
+        console.log("newFiles.length",newFiles.length)
+        setFileCount(newFiles.length);
         setError(null);
       } catch (err) {
         setError(
@@ -287,6 +292,8 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     setMaxImageDimension(maxDim);
 
     setFiles(newFiles);
+    console.log("newFiles.length",newFiles.length)
+    setFileCount(newFiles.length);
   };
 
   return (
@@ -294,6 +301,8 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         files,
         setFiles,
+        fileCount, 
+        setFileCount,
         processFile,
         error,
         setError,

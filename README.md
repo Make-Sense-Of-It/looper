@@ -8,7 +8,7 @@ That’s where Looper comes in. Looper will take a zip file of documents, will s
 It means you don’t need to mangle multiple files into a single one, and means less worrying about context window sizes.
 
 ## Explainer video
-[![A video explaining Looper](https://github.com/user-attachments/assets/8633cc6d-ae3f-4359-a81f-1ff81dd3c6f8)]
+https://github.com/user-attachments/assets/946d2a15-b2f9-4e61-b3b4-e0b1964104d1
 
 ## Motivation
 We put this together because we found ourselves frequently making the same type of Python project that was just looping over files. On our 11th go we thought it would make sense to create something others could use beyond the team.

@@ -1,40 +1,31 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Looper
+Looper lets a large language model loop over your files. It’s really very simple. But it’s useful.
 
-## Getting Started
+Large language models now have very large context windows and they have become a lot more attentive to that context. They will continue to improve. But, from using LLMs in the wild, it still seems to be the case that the results are better if you share the most relevant piece of information that you want analysed each time.
 
-First, run the development server:
+That’s where Looper comes in. Looper will take a zip file of documents, will share them one at a time with your choice of large language model and return the results as a zip file.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+It means you don’t need to mangle multiple files into a single one, and means less worrying about context window sizes.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Explainer video
+![A video explaining Looper](https://github.com/user-attachments/assets/8633cc6d-ae3f-4359-a81f-1ff81dd3c6f8)
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## Motivation
+We put this together because we found ourselves frequently making the same type of Python project that was just looping over files. On our 11th go we thought it would make sense to create something others could use beyond the team.
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+## Running locally
+This is a standard NextJs project that's using the pages router.
+ - Clone the repo
+ - Run `npm i`
+ - Run `npm run dev`
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+You should be good to go.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## .env files
+You will need to add an .env.local file. The minimum env field you need to set is `NEXT_PUBLIC_API_URL=`.
 
-## Learn More
+## Models + API keys
+At the moment the project only works with OpenAI and Anthropic. It would be straightforward to fork and get it working with other models. You'll need an API key from one of those providers. API keys are stored client side.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## Hosted version
+There is a hosted version of the service at [llmlooper.com](https://llmlooper.com)

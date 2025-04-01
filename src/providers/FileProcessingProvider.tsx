@@ -181,12 +181,12 @@ export const FileProcessingProvider: React.FC<{ children: ReactNode }> = ({
         currentConversation.model = selectedModel ?? "";
 
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileInfo.name);
-        const mimeType = getMimeType(fileInfo.name);
+        // fileInfo.mimeType = getMimeType(fileInfo.name);
 
         let fileContent: string | { type: string; data: string };
         if (isImage) {
           fileContent = {
-            type: mimeType,
+            type: fileInfo.mimeType,
             data: fileInfo.content as string,
           };
         } else {

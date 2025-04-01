@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// @/src/providers/FileAnalysisProvider
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import JSZip from "jszip";
 import { FileInfo } from "../types";
@@ -6,14 +7,24 @@ import {
   isHiddenOrSystemFile,
   isImageFile,
   getImageDimensions,
+  getMimeType,
 } from "../utils";
-import { getMaxImageDimension, resizeImage } from "../utils/imageProcessing";
+import {
+  getMaxImageDimension,
+  resizeImage
+} from "../utils/imageProcessing";
+
+declare global {
+  interface Window {
+    pdfjsLib: any;
+  }
+}
 
 interface FileAnalysisContextType {
   files: FileInfo[];
   setFiles: React.Dispatch<React.SetStateAction<FileInfo[]>>;
-  fileCount: number; 
-  setFileCount: React.Dispatch<React.SetStateAction<number | 0>>;
+  fileCount: number;
+  setFileCount: React.Dispatch<React.SetStateAction<number>>;
   processFile: (file: File) => Promise<void>;
   error: string | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -67,7 +78,10 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
             }
           }
         } else if (typeof content === "string") {
-          const fileInfo = await processSingleFile(file.name, content, false);
+          // Should generally not happen with readAsArrayBuffer
+          console.warn("FileReader read content as string unexpectedly.");
+          const buffer = stringToArrayBuffer(content); // Convert back if necessary
+          const fileInfo = await processSingleFile(file.name, buffer, false);
           if (fileInfo) {
             if (Array.isArray(fileInfo)) {
               newFiles = fileInfo;
@@ -76,19 +90,19 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
             }
           }
         } else {
-          throw new Error("Invalid file content");
+          throw new Error("Invalid file content type from FileReader");
         }
 
-        if (newFiles.some((file) => file.type === "image")) {
+        if (newFiles.some((f) => f.type === "image")) {
           const maxDim = getMaxImageDimension(newFiles);
           setMaxImageDimension(maxDim);
         }
 
         setFiles(newFiles);
-        console.log("newFiles.length",newFiles.length)
         setFileCount(newFiles.length);
         setError(null);
       } catch (err) {
+        console.error("Error processing file:", err);
         setError(
           (err as Error).message ||
             "An error occurred while processing the file."
@@ -97,9 +111,15 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     };
 
     reader.onerror = () => {
-      setError("An error occurred while reading the file.");
+      console.error("FileReader error:", reader.error);
+      setError(
+        `An error occurred while reading the file: ${
+          reader.error?.message || "Unknown read error"
+        }`
+      );
     };
 
+    // Always read as ArrayBuffer for consistency
     reader.readAsArrayBuffer(file);
   };
 
@@ -111,8 +131,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     for (const [filename, zipEntry] of Object.entries(zipContents.files)) {
       if (!zipEntry.dir && !isHiddenOrSystemFile(filename)) {
         const fileContent = await zipEntry.async("arraybuffer");
-        // Note: isInZip is true for files within a ZIP
-        const fileInfo = await processSingleFile(filename, fileContent, true);
+        const fileInfo = await processSingleFile(filename, fileContent, true); // isInZip = true
         if (fileInfo) {
           if (Array.isArray(fileInfo)) {
             processedFiles.push(...fileInfo);
@@ -128,134 +147,168 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
 
   const processSingleFile = async (
     filename: string,
-    content: ArrayBuffer | string,
+    content: ArrayBuffer, // Expect ArrayBuffer now
     isInZip: boolean
   ): Promise<FileInfo | FileInfo[] | null> => {
     if (isHiddenOrSystemFile(filename)) return null;
 
     const fileType = getFileType(filename);
-    const isCSV = filename.toLowerCase().endsWith(".csv");
-    const isTxt = filename.toLowerCase().endsWith(".txt");
+    const mimeType = getMimeType(filename); // Get specific MIME type
+    const isCSV = mimeType === "text/csv";
+    const isTxt = mimeType === "text/plain";
 
-    // Handle CSV and text files that aren't in a ZIP
+    // Handle CSV and text files that aren't in a ZIP - process row by row
     if ((isCSV || isTxt) && !isInZip) {
-      const textContent =
-        content instanceof ArrayBuffer
-          ? new TextDecoder().decode(content)
-          : content;
-
+      const textContent = new TextDecoder().decode(content);
       const rows = textContent
-        .split("\n")
+        .split(/[\r\n]+/) // Split by newline characters
         .map((row) => row.trim())
         .filter((row) => row.length > 0);
 
       if (rows.length === 0) return null;
 
-      // For CSV files, store header row and remove it from processing
       if (isCSV) {
         const headerRow = rows[0];
         setCsvHeader(headerRow);
-        rows.shift(); // Remove header row from processing
+        rows.shift(); // Remove header row
       }
 
-      // Process up to 500 rows
-      const processRows = rows.slice(0, 500);
+      const processRows = rows.slice(0, 500); // Limit rows
 
       return processRows.map((row, index) => ({
-        name: `${filename.replace(/\.(csv|txt)$/, "")}_row_${index + 1}`,
+        name: `${filename.replace(/\.(csv|txt)$/i, "")}_row_${index + 1}`,
         uploadDate: new Date().toLocaleString(),
-        size: row.length,
+        size: new Blob([row]).size, // Size of the row string
         type: "text" as const,
+        mimeType: mimeType, // Store mime type for the row
         content: row,
         characterCount: row.length,
       }));
     }
 
-    // Handle all other files (including CSVs/text files in ZIPs) as before
+    // Handle all other files OR CSV/TXT inside ZIPs as single entries
     const fileInfo: FileInfo = {
       name: filename,
       uploadDate: new Date().toLocaleString(),
-      size:
-        content instanceof ArrayBuffer ? content.byteLength : content.length,
+      size: content.byteLength,
       type: fileType,
-      content: "",
+      mimeType: mimeType, // Store the determined MIME type
+      content: "", // Will be populated below
     };
 
     switch (fileInfo.type) {
       case "image":
-        fileInfo.content =
-          content instanceof ArrayBuffer
-            ? arrayBufferToBase64(content)
-            : content;
-        fileInfo.dimensions = await getImageDimensions(
-          `data:image/png;base64,${fileInfo.content}`
-        );
+        // Store base64 *without* prefix
+        fileInfo.content = arrayBufferToBase64(content);
+        try {
+          // Pass the correct mimeType for creating the data URL
+          fileInfo.dimensions = await getImageDimensions(
+            `data:${fileInfo.mimeType};base64,${fileInfo.content}`
+          );
+        } catch (dimError) {
+          console.error(`Could not get dimensions for ${filename}:`, dimError);
+          // Decide how to handle: skip dimensions, set to 0, or error out?
+          fileInfo.dimensions = { width: 0, height: 0 };
+          // Optionally set an error state on the fileInfo itself
+        }
+
         break;
       case "pdf":
-        fileInfo.content = await processPDF(
-          content instanceof ArrayBuffer
-            ? content
-            : stringToArrayBuffer(content)
-        );
-        fileInfo.characterCount = fileInfo.content.length;
+        try {
+          fileInfo.content = await processPDF(content);
+          fileInfo.characterCount = fileInfo.content.length;
+        } catch (pdfError) {
+          console.error(`Failed to process PDF ${filename}:`, pdfError);
+          // Handle PDF processing error, maybe set content to an error message
+          // or return null/filter out this file later
+          setError(`Failed to process PDF: ${filename}`);
+          return null; // Or handle differently
+        }
         break;
-      default:
-        fileInfo.content =
-          content instanceof ArrayBuffer
-            ? new TextDecoder().decode(content)
-            : content;
+      default: // Includes 'text' type for files in ZIPs or non-CSV/TXT files
+        fileInfo.content = new TextDecoder().decode(content);
         fileInfo.characterCount = fileInfo.content.length;
     }
 
     return fileInfo;
   };
 
+  // Determines the general category ('image', 'pdf', 'text')
   const getFileType = (filename: string): FileInfo["type"] => {
-    if (isImageFile(filename)) return "image";
-    if (filename.endsWith(".pdf")) return "pdf";
-    return "text";
+    if (isImageFile(filename)) return "image"; // Assumes isImageFile checks common extensions
+    if (filename.toLowerCase().endsWith(".pdf")) return "pdf";
+    return "text"; // Default category
   };
 
+  // Setup PDF worker (ensure pdfjs-dist is installed)
   const setupPdfWorker = async () => {
-    const pdfjsLib = await import("pdfjs-dist");
-    const workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-    pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-  };
-
-  const processPDF = async (arrayBuffer: ArrayBuffer): Promise<string> => {
     try {
-      await setupPdfWorker();
-
-      const pdfjsLib = await import("pdfjs-dist");
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      let fullText = "";
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ");
-        fullText += pageText + "\n";
+      // Check if already loaded
+      if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        return window.pdfjsLib;
       }
-
-      return fullText.trim();
-    } catch (error) {
-      console.error("Error processing PDF:", error);
-      throw new Error("Failed to process PDF");
+      const pdfjsLib = await import("pdfjs-dist");
+      // Use a CDN version or host it yourself
+      const workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      window.pdfjsLib = pdfjsLib; // Store globally if needed elsewhere
+      return pdfjsLib;
+    } catch (e) {
+      console.error("Failed to load pdfjs-dist:", e);
+      throw new Error("PDF processing library failed to load.");
     }
   };
 
+  // Process PDF content
+  const processPDF = async (arrayBuffer: ArrayBuffer): Promise<string> => {
+    const pdfjsLib = await setupPdfWorker(); // Ensure worker is ready
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        // Ensure 'item' has 'str' property before joining
+        const pageText = textContent.items
+          .filter(
+            (item: any): item is { str: string } =>
+              typeof item?.str === "string"
+          )
+          .map((item: { str: string }) => item.str)
+          .join(" ");
+        fullText += pageText + "\n";
+        // Clean up page resources
+        page.cleanup();
+      } catch (pageError) {
+        console.error(`Error processing PDF page ${i}:`, pageError);
+        // Optionally add placeholder text or skip page
+        fullText += `[Error processing page ${i}]\n`;
+      }
+    }
+
+    return fullText.trim();
+  };
+
+  // Convert ArrayBuffer to Base64 string
   const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
     let binary = "";
     const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < bytes.byteLength; i++) {
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
-    return btoa(binary);
+    try {
+      return btoa(binary);
+    } catch (e) {
+      console.error("Failed to base64 encode:", e);
+      // Handle potential errors with large strings or invalid characters
+      throw new Error("Base64 encoding failed");
+    }
   };
 
+  // Convert String to ArrayBuffer
   const stringToArrayBuffer = (str: string): ArrayBuffer => {
     const buf = new ArrayBuffer(str.length);
     const bufView = new Uint8Array(buf);
@@ -265,35 +318,53 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
     return buf;
   };
 
+  // --- Updated Image Resize Handler ---
   const handleImageResize = async () => {
-    // console.log("new files");
+    setError(null); // Clear previous errors
     const newFiles = await Promise.all(
       files.map(async (file) => {
-        if (file.type === "image") {
+        // Only resize files categorized as 'image' and that have base64 content
+        if (file.type === "image" && typeof file.content === "string") {
           try {
-            const resizedContent = await resizeImage(file.content as string);
+            // Pass the current base64 content and its specific mimeType
+            const { base64Data: resizedBase64, mimeType: newMimeType } =
+              await resizeImage(
+                file.content, // Base64 string (no prefix)
+                file.mimeType, // Original MIME type
+                800 // Or use maxImageDimension if that's the target
+              );
+
+            // Get dimensions of the *new* (resized) image data
+            const newDimensions = await getImageDimensions(
+              `data:${newMimeType};base64,${resizedBase64}`
+            );
+
+            // Return the updated file info
             return {
               ...file,
-              content: resizedContent.split(",")[1], // Remove data:image/jpeg;base64, prefix
-              dimensions: await getImageDimensions(
-                `data:image/jpeg;base64,${resizedContent.split(",")[1]}`
-              ),
+              content: resizedBase64, // Update with new base64 data (no prefix)
+              mimeType: newMimeType, // *** Update the MIME type ***
+              dimensions: newDimensions, // Update dimensions
+              // Optionally update size if needed, though base64 size isn't file size
+              // size: ??? // Calculate based on base64 string length or estimate
             };
           } catch (error) {
             console.error(`Failed to resize image ${file.name}:`, error);
-            return file;
+            setError(`Failed to resize ${file.name}.`); // Set specific error
+            return file; // Return original file on error
           }
         }
-        return file;
+        return file; // Return non-image files unchanged
       })
     );
 
+    // Recalculate max dimension based on potentially updated dimensions
     const maxDim = getMaxImageDimension(newFiles);
     setMaxImageDimension(maxDim);
 
     setFiles(newFiles);
-    console.log("newFiles.length",newFiles.length)
-    setFileCount(newFiles.length);
+    // No need to update fileCount unless files are added/removed
+    // setFileCount(newFiles.length);
   };
 
   return (
@@ -301,7 +372,7 @@ export const FileAnalysisProvider: React.FC<{ children: ReactNode }> = ({
       value={{
         files,
         setFiles,
-        fileCount, 
+        fileCount,
         setFileCount,
         processFile,
         error,

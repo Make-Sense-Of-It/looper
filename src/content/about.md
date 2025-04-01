@@ -10,6 +10,10 @@ That’s where Looper comes in. Looper will take a zip file of documents, will s
 
 It means you don’t need to mangle multiple files into a single one, and means less worrying about context window sizes.
 
+## Contributing
+
+Looper is open-source. You can download, fork or contribute to the project by visiting [https://github.com/Make-Sense-Of-It/looper](https://github.com/Make-Sense-Of-It/looper)
+
 ## Use cases
 
 Looper is built for research. Here are some things it’s been used for:

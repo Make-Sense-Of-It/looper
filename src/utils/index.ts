@@ -10,7 +10,6 @@ export function getMimeType(filename: string): string {
     png: "image/png",
     gif: "image/gif",
     webp: "image/webp",
-    // Add more mappings as needed
   };
   return mimeTypes[extension || ""] || "application/octet-stream";
 }

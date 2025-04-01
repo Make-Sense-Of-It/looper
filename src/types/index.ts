@@ -4,6 +4,7 @@ export interface FileInfo {
   uploadDate: string;
   size: number;
   type: "text" | "image" | "pdf";
+  mimeType: string;
   content: string; // Base64 for images, text content for text files
   characterCount?: number; // Only for text files
   dimensions?: { width: number; height: number }; // Only for image files
